@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Catalog>
+    <CModel id="CZCircleSplat" parent="Splat">
+        <Model value="Assets\Textures\Splat_CZRedCircle.m3"/>
+    </CModel>
+    <CModel id="LiberatorAGTargetCursorSplat2" parent="RacePersistentSpellFX" Race="Terran">
+        <Model value="Assets\Textures\CZCircleSolid.m3"/>
+        <Image value="CZCircle\cz_circle_red.dds"/>
+        <ScaleMax value="2.250000,2.250000,2.250000"/>
+        <ScaleMin value="2.250000,2.250000,2.250000"/>
+    </CModel>
+</Catalog>

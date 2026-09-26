@@ -1,0 +1,39 @@
+include "TriggerLibs/natives"
+
+//--------------------------------------------------------------------------------------------------
+// Library: BountyHillLib
+//--------------------------------------------------------------------------------------------------
+// Variable Declarations
+point lib439EC7DD_gv_originalCenterPoint;
+fixed lib439EC7DD_gv_searchRadius;
+int lib439EC7DD_gv_searchAttempts;
+bool lib439EC7DD_gv_zoneIsClear;
+int lib439EC7DD_gv_bountyVespene;
+int lib439EC7DD_gv_bountyMinerals;
+int lib439EC7DD_gv_killingPlayer;
+fixed lib439EC7DD_gv_visionRadius;
+int lib439EC7DD_gv_playerCount;
+playergroup lib439EC7DD_gv_playersInZone;
+int lib439EC7DD_gv_controllingPlayer;
+unitgroup lib439EC7DD_gv_unitsInZone;
+int lib439EC7DD_gv_mineralsPerSecond;
+int lib439EC7DD_gv_roundTimeRemaining;
+int lib439EC7DD_gv_round3PlusTime;
+int lib439EC7DD_gv_round2Time;
+int lib439EC7DD_gv_round1Time;
+region lib439EC7DD_gv_captureZone;
+fixed lib439EC7DD_gv_captureRadius;
+point lib439EC7DD_gv_centerPoint;
+bool[17] lib439EC7DD_gv_playerEliminated;
+int lib439EC7DD_gv_maxRounds;
+int[17] lib439EC7DD_gv_playerScore;
+int lib439EC7DD_gv_bountyPercent;
+int lib439EC7DD_gv_currentRound;
+
+// Trigger Declarations
+trigger lib439EC7DD_gt_BountyOnDeath;
+trigger lib439EC7DD_gt_Init;
+
+// Library Initialization
+void lib439EC7DD_InitVariables ();
+

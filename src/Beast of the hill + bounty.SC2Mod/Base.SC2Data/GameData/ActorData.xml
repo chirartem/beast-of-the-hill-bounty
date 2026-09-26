@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Catalog>
+    <CActorSiteOpHigherOfTerrainAndWater id="CZCircleHeight">
+        <EditorCategories value=""/>
+    </CActorSiteOpHigherOfTerrainAndWater>
+    <CActorModel id="CZCirclePersistentActor" parent="ModelAddition">
+        <EditorCategories value=""/>
+        <Model value="LiberatorAGTargetCursorSplat2"/>
+        <On Terms="UnitBirth.InvisibleTargetDummy2" Send="Create"/>
+        <FogVisibility value="Visible"/>
+        <HostSiteOps Ops="CZCircleHeight CZCircleRaise" HoldPosition="1"/>
+    </CActorModel>
+    <CActorSiteOpLocalOffset id="CZCircleRaise">
+        <EditorCategories value=""/>
+        <LocalOffset value="0.000000,0.000000,0.150000"/>
+    </CActorSiteOpLocalOffset>
+    <CActorSplat id="CZCircleSplat">
+        <HoldTime value="-1.000000"/>
+        <!-- splat test off -->
+        <FogVisibility value="Visible"/>
+    </CActorSplat>
+    <CActorUnit id="InvisibleTargetDummy2" parent="GenericUnitStandardNoAutoSoundLinks" unitName="InvisibleTargetDummy2">
+        <Model value="Invisible"/>
+        <EditorModel value="Sphere"/>
+        <WalkAnimMoveSpeed value="0"/>
+        <StatusBarFlags index="Shields" value="0"/>
+        <StatusBarFlags index="Life" value="0"/>
+        <StatusBarFlags index="Energy" value="0"/>
+        <StatusBarFlags index="Cargo" value="0"/>
+        <StatusBarFlags index="Progress" value="0"/>
+        <StatusBarFlags index="Duration" value="0"/>
+        <UnitFlags index="ShowBlobShadow" value="0"/>
+        <FogVisibility value="Visible"/>
+        <!-- no creation event -->
+    </CActorUnit>
+</Catalog>

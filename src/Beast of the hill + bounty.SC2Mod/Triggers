@@ -1,0 +1,3020 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TriggerData>
+    <Library Id="439EC7DD">
+        <Root>
+            <Item Type="CustomScript" Library="439EC7DD" Id="C946F859"/>
+            <Item Type="Variable" Library="439EC7DD" Id="58818BCD"/>
+            <Item Type="Variable" Library="439EC7DD" Id="67B5F3FD"/>
+            <Item Type="Variable" Library="439EC7DD" Id="E74AC9A1"/>
+            <Item Type="Variable" Library="439EC7DD" Id="F48D1177"/>
+            <Item Type="Variable" Library="439EC7DD" Id="14AB449F"/>
+            <Item Type="Variable" Library="439EC7DD" Id="B7FC7E86"/>
+            <Item Type="Variable" Library="439EC7DD" Id="CC2E161C"/>
+            <Item Type="Variable" Library="439EC7DD" Id="795959C0"/>
+            <Item Type="Trigger" Library="439EC7DD" Id="3683B92F"/>
+            <Item Type="Variable" Library="439EC7DD" Id="7EBF535B"/>
+            <Item Type="Variable" Library="439EC7DD" Id="11DE89B1"/>
+            <Item Type="Variable" Library="439EC7DD" Id="66743B9D"/>
+            <Item Type="Variable" Library="439EC7DD" Id="C21DB7D2"/>
+            <Item Type="Trigger" Library="439EC7DD" Id="D408621F"/>
+            <Item Type="Variable" Library="439EC7DD" Id="C4A7156F"/>
+            <Item Type="Variable" Library="439EC7DD" Id="FC2A72AB"/>
+            <Item Type="Variable" Library="439EC7DD" Id="F70D8505"/>
+            <Item Type="Variable" Library="439EC7DD" Id="3A958EE1"/>
+            <Item Type="Variable" Library="439EC7DD" Id="9BB88D22"/>
+            <Item Type="Variable" Library="439EC7DD" Id="CB7D674A"/>
+            <Item Type="Trigger" Library="439EC7DD" Id="9A483C40"/>
+            <Item Type="Variable" Library="439EC7DD" Id="F1119085"/>
+            <Item Type="Variable" Library="439EC7DD" Id="826F34FC"/>
+            <Item Type="Variable" Library="439EC7DD" Id="A97B7966"/>
+            <Item Type="Variable" Library="439EC7DD" Id="79991695"/>
+            <Item Type="Variable" Library="439EC7DD" Id="A06F808B"/>
+            <Item Type="Variable" Library="439EC7DD" Id="B18A3820"/>
+            <Item Type="Variable" Library="439EC7DD" Id="9BA63CEC"/>
+        </Root>
+        <Element Type="CustomScript" Id="C946F859">
+            <ScriptCode>
+                // --- neutral objects near a point that hud_Clear will remove (Xel&apos;Naga towers, rocks, critters...; never minerals / geysers)
+                unitgroup lib439EC7DD_hud_Neutrals (point c, fixed r) {
+                    unitgroup g;
+                    unitgroup res;
+                    int i;
+                    int n;
+                    int o;
+                    unit u;
+                    res = UnitGroupEmpty();
+                    g = UnitGroup(null, c_playerAny, RegionCircle(c, r), null, 0);
+                    n = UnitGroupCount(g, c_unitCountAll);
+                    i = 1;
+                    while (i &lt;= n) {
+                        u = UnitGroupUnit(g, i);
+                        o = UnitGetOwner(u);
+                        if ((o == 0 || o == 15) &amp;&amp; !UnitFilterMatch(u, o, UnitFilter((1 &lt;&lt; c_targetFilterRawResource), 0, 0, 0))) { UnitGroupAdd(res, u); }
+                        i = i + 1;
+                    }
+                    return res;
+                }
+                // true if an unwalkable point is only blocked by one of those removable objects
+                bool lib439EC7DD_hud_Removable (point p, unitgroup ng) {
+                    int i;
+                    int n;
+                    unit u;
+                    n = UnitGroupCount(ng, c_unitCountAll);
+                    i = 1;
+                    while (i &lt;= n) {
+                        u = UnitGroupUnit(ng, i);
+                        if (DistanceBetweenPoints(p, UnitGetPosition(u)) &lt;= UnitGetPropertyFixed(u, c_unitPropRadius, c_unitPropCurrent) + 1.0) { return true; }
+                        i = i + 1;
+                    }
+                    return false;
+                }
+                // --- pick a spot for the red circle: whole circle on one cliff level, height spread &lt; 0.4, no hiding grass (shrubs),
+                // every half cell walkable - except where only a removable neutral object (tower, rocks) stands
+                bool lib439EC7DD_hud_IsFlat (point c, fixed r) {
+                    int a;
+                    int i;
+                    int j;
+                    int k;
+                    fixed h0;
+                    fixed h;
+                    point q;
+                    int lvl;
+                    unitgroup ng;
+                    h0 = WorldHeight(c_heightMapGround, c);
+                    lvl = CliffLevel(c);
+                    a = 0;
+                    while (a &lt; 16) {
+                        q = PointWithOffsetPolar(c, r, IntToFixed(a) * 22.5);
+                        if (CliffLevel(q) != lvl) { return false; }
+                        h = WorldHeight(c_heightMapGround, q);
+                        if (AbsF(h - h0) &gt; 0.4) { return false; }
+                        q = PointWithOffsetPolar(c, r * 0.5, IntToFixed(a) * 22.5);
+                        if (CliffLevel(q) != lvl) { return false; }
+                        h = WorldHeight(c_heightMapGround, q);
+                        if (AbsF(h - h0) &gt; 0.4) { return false; }
+                        a = a + 1;
+                    }
+                    ng = null;
+                    k = FixedToInt(r * 2.0);
+                    i = -k;
+                    while (i &lt;= k) {
+                        j = -k;
+                        while (j &lt;= k) {
+                            if (i * i + j * j &lt;= k * k) {
+                                q = PointWithOffset(c, IntToFixed(i) * 0.5, IntToFixed(j) * 0.5);
+                                if (InShrub(q)) { return false; }
+                                if (PointPathingPassable(q) == false) { if (ng == null) { ng = lib439EC7DD_hud_Neutrals(c, r + 3.0); } if (!lib439EC7DD_hud_Removable(q, ng)) { return false; } }
+                            }
+                            j = j + 1;
+                        }
+                        i = i + 1;
+                    }
+                    return true;
+                }
+                // a start location of any active player (kept for possible later use)
+                point lib439EC7DD_hud_Start () {
+                    int p;
+                    p = 1;
+                    while (p &lt;= 15) {
+                        if (PlayerStatus(p) == c_playerStatusActive &amp;&amp; PlayerStartLocation(p) != null) { return PlayerStartLocation(p); }
+                        p = p + 1;
+                    }
+                    return null;
+                }
+                // good spot: see IsFlat; no minerals / geysers and no players&apos; buildings under or next to the circle
+                bool lib439EC7DD_hud_GoodSpot (point q, fixed r, point s) {
+                    unitgroup g;
+                    int i;
+                    int n;
+                    int o;
+                    if (!lib439EC7DD_hud_IsFlat(q, r)) { return false; }
+                    if (UnitGroupCount(UnitGroup(null, c_playerAny, RegionCircle(q, r + 0.5), UnitFilter((1 &lt;&lt; c_targetFilterRawResource), 0, 0, 0), 1), c_unitCountAll) &gt; 0) { return false; }
+                    g = UnitGroup(null, c_playerAny, RegionCircle(q, r + 0.5), UnitFilter((1 &lt;&lt; c_targetFilterStructure), 0, 0, 0), 0);
+                    n = UnitGroupCount(g, c_unitCountAll);
+                    i = 1;
+                    while (i &lt;= n) {
+                        o = UnitGetOwner(UnitGroupUnit(g, i));
+                        if (o &gt;= 1 &amp;&amp; o &lt;= 14) { return false; }
+                        i = i + 1;
+                    }
+                    return true;
+                }
+                // clear the circle: remove neutral objects touching it (Xel&apos;Naga towers, rocks, critters) and decorations standing on it
+                void lib439EC7DD_hud_Clear (point c, fixed r) {
+                    unitgroup ng;
+                    int i;
+                    int n;
+                    unit u;
+                    actor a; revealer[16] rv;
+                    ng = lib439EC7DD_hud_Neutrals(c, r + 4.0);
+                    n = UnitGroupCount(ng, c_unitCountAll);
+                    i = 1;
+                    while (i &lt;= n) {
+                        u = UnitGroupUnit(ng, i);
+                        if (DistanceBetweenPoints(c, UnitGetPosition(u)) &lt;= r + UnitGetPropertyFixed(u, c_unitPropRadius, c_unitPropCurrent) + 0.5) { UnitRemove(u); }
+                        i = i + 1;
+                    }
+                    if (n &gt; 0) { i = 0; while (i &lt;= 15) { rv[i] = VisRevealerCreate(i, RegionCircle(c, r + 4.0)); i = i + 1; } Wait(0.5, c_timeGame); i = 0; while (i &lt;= 15) { VisRevealerDestroy(rv[i]); i = i + 1; } }
+                    // (above) a 0.5 s reveal so removed objects also vanish from everyone&apos;s fog of war, then the vision is taken away again
+                }
+                // remove the map&apos;s own fog / mist / steam decorations near the circle (only map doodads: unit and ability effects are never touched)
+                void lib439EC7DD_hud_Unfog (point c, fixed r) {
+                    string list;
+                    string t;
+                    int i;
+                    actor a;
+                    list = &quot;XelNaga_PsionicStormCloud Fog_Hazy Fog_Aiur Fog_Aiur_Thick Fog_Shakuras Fog_Shakuras_Thick_Windy Fog_Shakuras_Thick_Windy_Fast Fog_Shakuras_Windy Fog_Shakuras_Windy_Fast Fog_Ulnar FogMistSnow FogMist FogBlue FogGrey FogStormDeep FogStormDeepWhite GasGiantMist Void_Mist TheVoid_DeathCloud_Intense SnowBase_Steam_Thick SnowBase_Steam_Thick_Sm SpaceSteamJet SpacePlatformSteamVent SmokeMedium Smoke_Battle Hybrid01GasCloud Nanocloud_Currents CreepCloud DustStorms WindEnergyDust&quot;;
+                    i = 1;
+                    t = StringWord(list, i);
+                    while (t != &quot;&quot;) {
+                        a = ActorRegionCreate(null, &quot;TriggerRegion&quot;, RegionCircle(c, r));
+                        ActorRegionSend(a, c_actorIntersectAgainstRadiusVisual, &quot;Destroy&quot;, &quot;Doodad&quot;, &quot;ScopeContains &quot; + t + &quot;; !HasStatus DoodadKilled&quot;);
+                        ActorScopeKill(ActorScopeFromActor(a));
+                        i = i + 1;
+                        t = StringWord(list, i);
+                    }
+                }
+                // search outward from the map centre in square rings of whole cells (up to 30), nearest good spot wins
+                point lib439EC7DD_hud_FlatSpot (point c, fixed r) {
+                    int d;
+                    int x;
+                    int y;
+                    int step;
+                    int cx;
+                    int cy;
+                    point q;
+                    point s;
+                    r = lib439EC7DD_gv_captureRadius; // no extra margin: the spot only has to fit the circle itself
+                    cx = RoundI(PointGetX(c));
+                    cy = RoundI(PointGetY(c));
+                    d = 0;
+                    while (d &lt;= 30) {
+                        x = -d;
+                        while (x &lt;= d) {
+                            if (AbsI(x) == d) { step = 1; } else { step = 2 * d; }
+                            y = -d;
+                            while (y &lt;= d) {
+                                q = Point(IntToFixed(cx + x), IntToFixed(cy + y));
+                                if (lib439EC7DD_hud_GoodSpot(q, r, s)) { return q; }
+                                y = y + step;
+                            }
+                            x = x + 1;
+                        }
+                        d = d + 1;
+                    }
+                    return c;
+                }
+                // ===== Bounty Hill HUD (timer, score, help) =====
+                bool lib439EC7DD_hud_built;
+                int lib439EC7DD_hud_timerDlg;
+                int lib439EC7DD_hud_timerLbl;
+                int lib439EC7DD_hud_helpBtn;
+                int lib439EC7DD_hud_scoreHdrDlg;
+                int lib439EC7DD_hud_scoreBtn;
+                int lib439EC7DD_hud_scoreDlg;
+                int lib439EC7DD_hud_infoDlg;
+                int[16] lib439EC7DD_hud_ptsLbl;
+                bool[16] lib439EC7DD_hud_hasRow;
+                bool[16] lib439EC7DD_hud_infoShown;
+                bool[16] lib439EC7DD_hud_scoreShown;
+                int[16] lib439EC7DD_hud_lastScore;
+                int lib439EC7DD_hud_lastRound;
+                int lib439EC7DD_hud_lastWarn;
+                int lib439EC7DD_hud_warnDlg;
+                int lib439EC7DD_hud_warnLbl;
+                int lib439EC7DD_hud_warnId;
+                trigger lib439EC7DD_hud_fadeTrig;
+                bool lib439EC7DD_gv_gameEnded;
+                bool lib439EC7DD_hud_contested;
+                int[25] lib439EC7DD_hud_rx;
+                int[25] lib439EC7DD_hud_ry;
+                int[16] lib439EC7DD_hud_team;
+                int lib439EC7DD_hud_width;
+                int lib439EC7DD_hud_lastT;
+                int[16] lib439EC7DD_hud_shownScore;
+                // bounty table
+                bool[16] lib439EC7DD_hud_bountyShown;
+                int[16] lib439EC7DD_hud_bM;
+                int[16] lib439EC7DD_hud_bG;
+                int[16] lib439EC7DD_hud_bNameLbl;
+                int[16] lib439EC7DD_hud_bMinLbl;
+                int[16] lib439EC7DD_hud_bGasLbl;
+                int[16] lib439EC7DD_hud_bList;
+                int lib439EC7DD_hud_bRows;
+                bool lib439EC7DD_hud_bDirty;
+                // standard timer windows: the only HUD that observers / referees see live in &quot;Everyone&quot; vision
+                timer lib439EC7DD_hud_dummyT;
+                int lib439EC7DD_hud_twTimer;
+                int[16] lib439EC7DD_hud_twScore;
+                int[16] lib439EC7DD_hud_twBounty;
+                // bounty layout: names live in window [0], each row&apos;s values in its own borderless window [1..n] laid over it
+                int lib439EC7DD_hud_bGapW = 150;
+                int lib439EC7DD_hud_bRowH = 21;
+                int lib439EC7DD_hud_bOff1 = -27;
+                int lib439EC7DD_hud_bOffRow = 16;
+                int lib439EC7DD_hud_bOffK = 0;
+                int lib439EC7DD_hud_bOffX = 6;
+                // every slot 0..15 (incl. neutral 0) -- used for all HUD visibility, so spectators get it wherever SC2 allows
+                playergroup lib439EC7DD_hud_grp;
+                playergroup lib439EC7DD_hud_G () {
+                    int p;
+                    if (lib439EC7DD_hud_grp == null) {
+                        lib439EC7DD_hud_grp = PlayerGroupEmpty();
+                        p = 0;
+                        while (p &lt;= 15) {
+                            PlayerGroupAdd(lib439EC7DD_hud_grp, p);
+                            p = p + 1;
+                        }
+                    }
+                    return lib439EC7DD_hud_grp;
+                }
+                // HUD boxes live inside the game UI (not trigger dialogs) so observers / referees see them too
+                int lib439EC7DD_hud_root;
+                int lib439EC7DD_hud_Box (int w, int h, int anchor, int x, int y) {
+                    int p;
+                    int img;
+                    if (lib439EC7DD_hud_root == 0) {
+                        lib439EC7DD_hud_root = DialogControlHookupStandard(c_triggerControlTypePanel, &quot;UIContainer/FullscreenUpperContainer&quot;);
+                    }
+                    p = DialogControlCreateInPanel(lib439EC7DD_hud_root, c_triggerControlTypePanel);
+                    DialogControlSetObservedType(p, c_triggerObservedTypeObservedOrSelectedPlayerId);
+                    DialogControlSetSize(p, lib439EC7DD_hud_G(), w, h);
+                    DialogControlSetPosition(p, lib439EC7DD_hud_G(), anchor, x, y);
+                    img = DialogControlCreateInPanel(p, c_triggerControlTypeImage);
+                    DialogControlSetObservedType(img, c_triggerObservedTypeObservedOrSelectedPlayerId);
+                    DialogControlSetSize(img, lib439EC7DD_hud_G(), w, h);
+                    DialogControlSetPosition(img, lib439EC7DD_hud_G(), c_anchorTopLeft, 0, 0);
+                    DialogControlSetPropertyAsString(img, c_triggerControlPropertyImage, lib439EC7DD_hud_G(), &quot;@@UI/TriggerDialogFrameBackground&quot;);
+                    DialogControlSetPropertyAsInt(img, c_triggerControlPropertyImageType, lib439EC7DD_hud_G(), c_triggerImageTypeBorder);
+                    return p;
+                }
+                int lib439EC7DD_hud_TW (text title) {
+                    int w;
+                    if (lib439EC7DD_hud_dummyT == null) { lib439EC7DD_hud_dummyT = TimerCreate(); }
+                    w = TimerWindowCreate(lib439EC7DD_hud_dummyT, title, true, false);
+                    TimerWindowSetFormat(w, StringToText(&quot; &quot;));
+                    return w;
+                }
+                text lib439EC7DD_hud_TeamName (int lead);
+                // score table: one timer window, names in the title column, points in the time column
+                void lib439EC7DD_hud_ScoreRefresh () {
+                    int p;
+                    int i;
+                    int j;
+                    int k;
+                    int n;
+                    int[14] ord;
+                    text t;
+                    text v;
+                    // teams sorted by points, most first (ties keep player order)
+                    n = 0;
+                    p = 1;
+                    while (p &lt;= 13) {
+                        if (lib439EC7DD_hud_team[p] == p) { ord[n] = p; n = n + 1; }
+                        p = p + 1;
+                    }
+                    i = 1;
+                    while (i &lt; n) {
+                        k = ord[i];
+                        j = i - 1;
+                        while (j &gt;= 0) {
+                            if (lib439EC7DD_gv_playerScore[ord[j]] &gt;= lib439EC7DD_gv_playerScore[k]) { break; }
+                            ord[j + 1] = ord[j];
+                            j = j - 1;
+                        }
+                        ord[j + 1] = k;
+                        i = i + 1;
+                    }
+                    t = StringToText(&quot;&lt;c val=\&quot;FFD700\&quot;&gt;Score&lt;/c&gt;&quot;);
+                    v = StringToText(&quot; &quot;);
+                    i = 0;
+                    while (i &lt; n) {
+                        p = ord[i];
+                        t = t + StringToText(&quot;&lt;n/&gt;&quot;) + lib439EC7DD_hud_TeamName(p);
+                        v = v + StringToText(&quot;&lt;n/&gt;&quot;) + IntToText(lib439EC7DD_gv_playerScore[p]);
+                        i = i + 1;
+                    }
+                    TimerWindowSetTitle(lib439EC7DD_hud_twScore[0], t);
+                    TimerWindowSetFormat(lib439EC7DD_hud_twScore[0], v);
+                }
+                text lib439EC7DD_hud_BountyText (int p) {
+                    return StringToText(&quot;&lt;c val=\&quot;5AB4FF\&quot;&gt;&quot; + IntToString(lib439EC7DD_hud_bM[p]) + &quot;&lt;/c&gt;  /  &lt;c val=\&quot;5EE35E\&quot;&gt;&quot; + IntToString(lib439EC7DD_hud_bG[p]) + &quot;&lt;/c&gt;&quot;);
+                }
+                int lib439EC7DD_hud_Ctrl (int dlg, int type, int w, int h, int anchor, int x, int y, text t) {
+                    int c;
+                    c = DialogControlCreateInPanel(dlg, type);
+                    DialogControlSetObservedType(c, c_triggerObservedTypeObservedOrSelectedPlayerId);
+                    DialogControlSetSize(c, lib439EC7DD_hud_G(), w, h);
+                    DialogControlSetPosition(c, lib439EC7DD_hud_G(), anchor, x, y);
+                    DialogControlSetPropertyAsText(c, c_triggerControlPropertyText, lib439EC7DD_hud_G(), t);
+                    return c;
+                }
+                int lib439EC7DD_hud_Lbl (int dlg, int w, int h, int anchor, int x, int y, text t, string style) {
+                    int c;
+                    c = lib439EC7DD_hud_Ctrl(dlg, c_triggerControlTypeLabel, w, h, anchor, x, y, t);
+                    DialogControlSetPropertyAsString(c, c_triggerControlPropertyStyle, lib439EC7DD_hud_G(), style);
+                    return c;
+                }
+                int lib439EC7DD_hud_Img (int dlg, int w, int h, int anchor, int x, int y, string path) {
+                    int c;
+                    c = DialogControlCreateInPanel(dlg, c_triggerControlTypeImage);
+                    DialogControlSetObservedType(c, c_triggerObservedTypeObservedOrSelectedPlayerId);
+                    DialogControlSetSize(c, lib439EC7DD_hud_G(), w, h);
+                    DialogControlSetPosition(c, lib439EC7DD_hud_G(), anchor, x, y);
+                    DialogControlSetPropertyAsString(c, c_triggerControlPropertyImage, lib439EC7DD_hud_G(), path);
+                    return c;
+                }
+                // a real participant: playing, human or AI, and owns units (observers / referees own nothing)
+                bool lib439EC7DD_hud_IsReal (int p) {
+                    if (PlayerStatus(p) != c_playerStatusActive) { return false; }
+                    if (PlayerType(p) != c_playerTypeUser &amp;&amp; PlayerType(p) != c_playerTypeComputer) { return false; }
+                    return (UnitGroupCount(UnitGroup(null, p, RegionEntireMap(), null, 0), c_unitCountAll) &gt; 0);
+                }
+                // called from the BountyOnDeath trigger after a bounty is paid
+                void lib439EC7DD_hud_AddBounty (int p, int m, int g) {
+                    if (p &lt; 1 || p &gt; 15) { return; }
+                    lib439EC7DD_hud_bM[p] = lib439EC7DD_hud_bM[p] + m;
+                    lib439EC7DD_hud_bG[p] = lib439EC7DD_hud_bG[p] + g;
+                    lib439EC7DD_hud_bDirty = true;
+                }
+                // re-sort the bounty table: most earned (minerals + gas) first
+                void lib439EC7DD_hud_BountyRefresh () {
+                    text t;
+                    text v;
+                    int i;
+                    int j;
+                    int k;
+                    int a;
+                    int b;
+                    int p;
+                    i = 0;
+                    while (i &lt; lib439EC7DD_hud_bRows) {
+                        j = i + 1;
+                        while (j &lt; lib439EC7DD_hud_bRows) {
+                            a = lib439EC7DD_hud_bList[i];
+                            b = lib439EC7DD_hud_bList[j];
+                            if (lib439EC7DD_hud_bM[b] + lib439EC7DD_hud_bG[b] &gt; lib439EC7DD_hud_bM[a] + lib439EC7DD_hud_bG[a]) {
+                                lib439EC7DD_hud_bList[i] = b;
+                                lib439EC7DD_hud_bList[j] = a;
+                            }
+                            j = j + 1;
+                        }
+                        i = i + 1;
+                    }
+                    t = StringToText(&quot;&lt;c val=\&quot;FFD700\&quot;&gt;Bounty earned&lt;/c&gt;&quot;);
+                    v = StringToText(&quot; &quot;);
+                    k = 0;
+                    while (k &lt; lib439EC7DD_hud_bRows) {
+                        p = lib439EC7DD_hud_bList[k];
+                        t = t + StringToText(&quot;&lt;n/&gt;&quot;) + TextWithColor(PlayerName(p), libNtve_gf_ConvertPlayerColorToColor(PlayerGetColorIndex(p, false)));
+                        TimerWindowSetTitle(lib439EC7DD_hud_twBounty[k + 1], lib439EC7DD_hud_BountyText(p));
+                        k = k + 1;
+                    }
+                    TimerWindowSetTitle(lib439EC7DD_hud_twBounty[0], t);
+                    TimerWindowSetFormat(lib439EC7DD_hud_twBounty[0], v);
+                }
+                // ===== teams =====
+                void lib439EC7DD_hud_Teams () {
+                    int p;
+                    int q;
+                    p = 1;
+                    while (p &lt;= 13) {
+                        lib439EC7DD_hud_team[p] = 0;
+                        if (lib439EC7DD_hud_IsReal(p)) {
+                            lib439EC7DD_hud_team[p] = p;
+                            q = 1;
+                            while (q &lt; p) {
+                                if (lib439EC7DD_hud_team[q] == q &amp;&amp; PlayerGetAlliance(p, c_allianceIdPassive, q) &amp;&amp; PlayerGetAlliance(q, c_allianceIdPassive, p)) {
+                                    lib439EC7DD_hud_team[p] = q;
+                                    q = p;
+                                }
+                                q = q + 1;
+                            }
+                        }
+                        p = p + 1;
+                    }
+                }
+                text lib439EC7DD_hud_TeamName (int lead) {
+                    int p;
+                    text t;
+                    bool first;
+                    t = StringToText(&quot;&quot;);
+                    first = true;
+                    p = 1;
+                    while (p &lt;= 13) {
+                        if (lib439EC7DD_hud_team[p] == lead &amp;&amp; lead != 0) {
+                            if (!first) { t = t + StringToText(&quot; + &quot;); }
+                            t = t + TextWithColor(PlayerName(p), libNtve_gf_ConvertPlayerColorToColor(PlayerGetColorIndex(p, false)));
+                            first = false;
+                        }
+                        p = p + 1;
+                    }
+                    return t;
+                }
+                int lib439EC7DD_hud_TeamSize (int lead) {
+                    int p;
+                    int n;
+                    n = 0;
+                    p = 1;
+                    while (p &lt;= 13) {
+                        if (lib439EC7DD_hud_team[p] == lead &amp;&amp; lead != 0) { n = n + 1; }
+                        p = p + 1;
+                    }
+                    return n;
+                }
+                // ===== zone priority: 1 ground &gt; 2 cloaked/burrowed ground &gt; 3 air &gt; 4 cloaked air &gt; 5 temporary units &gt; 6 eggs/cocoons =====
+                bool lib439EC7DD_hud_IsTemp (string t) {
+                    if (t == &quot;Broodling&quot; || t == &quot;BroodlingEscort&quot; || t == &quot;AutoTurret&quot; || t == &quot;MULE&quot; || t == &quot;Interceptor&quot;) { return true; }
+                    if (t == &quot;AdeptPhaseShift&quot; || t == &quot;DisruptorPhased&quot; || t == &quot;InfestedTerran&quot; || t == &quot;InfestorTerran&quot;) { return true; }
+                    if (StringContains(t, &quot;Locust&quot;, c_stringBegin, c_stringNoCase)) { return true; }
+                    if (StringContains(t, &quot;Changeling&quot;, c_stringBegin, c_stringNoCase)) { return true; }
+                    return false;
+                }
+                bool lib439EC7DD_hud_IsEgg (string t) {
+                    if (t == &quot;Egg&quot; || t == &quot;Larva&quot; || StringContains(t, &quot;Cocoon&quot;, c_stringAnywhere, c_stringNoCase) || StringContains(t, &quot;Egg&quot;, c_stringEnd, c_stringCase)) { return true; }
+                    return false;
+                }
+                bool lib439EC7DD_hud_Round (bool testConds, bool runActions) {
+                    unitgroup g;
+                    unit u;
+                    unit bestU;
+                    int n;
+                    int i;
+                    int o;
+                    int tier;
+                    int best;
+                    int teams;
+                    int ctl;
+                    int p;
+                    int lead;
+                    string ty;
+                    bool[16] at;
+                    bool[16] present;
+                    int[128] tiers;
+                    text msg;
+                    if (lib439EC7DD_hud_built == false || lib439EC7DD_gv_gameEnded) { return true; }
+                    // one unit search per tick; each unit&apos;s tier is worked out once and reused
+                    g = UnitGroup(null, c_playerAny, lib439EC7DD_gv_captureZone, UnitFilter(0, 0, (1 &lt;&lt; c_targetFilterStructure) | (1 &lt;&lt; c_targetFilterMissile), (1 &lt;&lt; (c_targetFilterDead - 32)) | (1 &lt;&lt; (c_targetFilterHidden - 32)) | (1 &lt;&lt; (c_targetFilterHallucination - 32)) | (1 &lt;&lt; (c_targetFilterBenign - 32))), 0);
+                    best = 99;
+                    bestU = null;
+                    p = 0;
+                    while (p &lt;= 15) { at[p] = false; present[p] = false; p = p + 1; }
+                    n = UnitGroupCount(g, c_unitCountAll);
+                    if (n &gt; 127) { n = 127; }
+                    // pass 1: tier of every unit, best tier
+                    i = 1;
+                    while (i &lt;= n) {
+                        u = UnitGroupUnit(g, i);
+                        o = UnitGetOwner(u);
+                        tiers[i] = 99;
+                        if (o &gt;= 1 &amp;&amp; o &lt;= 13 &amp;&amp; lib439EC7DD_hud_team[o] != 0) {
+                            present[o] = true;
+                            ty = UnitGetType(u);
+                            if (lib439EC7DD_hud_IsEgg(ty)) { tier = 6; }
+                            else if (lib439EC7DD_hud_IsTemp(ty)) { tier = 5; }
+                            else if (UnitFilterMatch(u, o, UnitFilter((1 &lt;&lt; c_targetFilterAir), 0, 0, 0))) {
+                                if (UnitFilterMatch(u, o, UnitFilter((1 &lt;&lt; c_targetFilterCloaked), 0, 0, 0))) { tier = 4; } else { tier = 3; }
+                            }
+                            else {
+                                if (UnitFilterMatch(u, o, UnitFilter((1 &lt;&lt; c_targetFilterCloaked), 0, 0, 0)) || UnitFilterMatch(u, o, UnitFilter((1 &lt;&lt; c_targetFilterBuried), 0, 0, 0))) { tier = 2; } else { tier = 1; }
+                            }
+                            tiers[i] = tier;
+                            if (tier &lt; best) { best = tier; }
+                        }
+                        i = i + 1;
+                    }
+                    // pass 2: teams that have a unit of the best tier
+                    teams = 0;
+                    ctl = 0;
+                    i = 1;
+                    while (i &lt;= n &amp;&amp; best &lt; 99) {
+                        if (tiers[i] == best) {
+                            u = UnitGroupUnit(g, i);
+                            lead = lib439EC7DD_hud_team[UnitGetOwner(u)];
+                            if (!at[lead]) { at[lead] = true; teams = teams + 1; ctl = lead; bestU = u; }
+                        }
+                        i = i + 1;
+                    }
+                    if (teams != 1) { ctl = 0; }
+                    lib439EC7DD_gv_unitsInZone = g;
+                    lib439EC7DD_gv_playerCount = teams;
+                    lib439EC7DD_gv_controllingPlayer = ctl;
+                    // minerals: every member of the controlling team who has units on the circle
+                    if (ctl != 0) {
+                        p = 1;
+                        while (p &lt;= 13) {
+                            if (lib439EC7DD_hud_team[p] == ctl &amp;&amp; present[p]) {
+                                PlayerModifyPropertyInt(p, c_playerPropMinerals, c_playerPropOperAdd, lib439EC7DD_gv_mineralsPerSecond);
+                            }
+                            p = p + 1;
+                        }
+                    }
+                    lib439EC7DD_gv_roundTimeRemaining = lib439EC7DD_gv_roundTimeRemaining - 1;
+                    if (lib439EC7DD_gv_roundTimeRemaining &gt; 0) { return true; }
+                    lib439EC7DD_gv_roundTimeRemaining = 0;
+                    // overtime: several teams on top priority -&gt; wait until one remains
+                    if (teams &gt; 1) {
+                        if (!lib439EC7DD_hud_contested) {
+                            lib439EC7DD_hud_contested = true;
+                            UIDisplayMessage(lib439EC7DD_hud_G(), c_messageAreaChat, StringToText(&quot;The point is contested!&quot;));
+                        }
+                        return true;
+                    }
+                    lib439EC7DD_hud_contested = false;
+                    if (ctl == 0) {
+                        msg = StringToText(&quot;No players were in the zone! No one wins this round!&quot;);
+                    }
+                    else {
+                        p = 1;
+                        while (p &lt;= 13) {
+                            if (lib439EC7DD_hud_team[p] == ctl) { lib439EC7DD_gv_playerScore[p] = lib439EC7DD_gv_playerScore[p] + 1; }
+                            p = p + 1;
+                        }
+                        msg = lib439EC7DD_hud_TeamName(ctl);
+                        if (bestU != null) {
+                            msg = msg + StringToText(&quot; wins the round with &quot;) + UnitTypeGetName(UnitGetType(bestU)) + StringToText(&quot;!&quot;);
+                        }
+                        else {
+                            msg = msg + StringToText(&quot; wins the round!&quot;);
+                        }
+                        msg = msg + StringToText(&quot; Has &quot; + IntToString(lib439EC7DD_gv_playerScore[ctl]) + &quot; point(s) out of &quot; + IntToString(lib439EC7DD_gv_maxRounds) + &quot;!&quot;);
+                    }
+                    UIDisplayMessage(lib439EC7DD_hud_G(), c_messageAreaChat, msg);
+                    lib439EC7DD_gv_currentRound = lib439EC7DD_gv_currentRound + 1;
+                    if (lib439EC7DD_gv_currentRound == 2) { lib439EC7DD_gv_roundTimeRemaining = lib439EC7DD_gv_round2Time; }
+                    else if (lib439EC7DD_gv_currentRound &gt;= 3) { lib439EC7DD_gv_roundTimeRemaining = lib439EC7DD_gv_round3PlusTime; }
+                    else { lib439EC7DD_gv_roundTimeRemaining = lib439EC7DD_gv_round1Time; }
+                    lib439EC7DD_hud_lastWarn = -1;
+                    // victory: the whole team wins, everyone else loses
+                    if (ctl != 0 &amp;&amp; lib439EC7DD_gv_playerScore[ctl] &gt;= lib439EC7DD_gv_maxRounds) {
+                        lib439EC7DD_gv_gameEnded = true;
+                        p = 1;
+                        while (p &lt;= 13) {
+                            if (PlayerStatus(p) == c_playerStatusActive &amp;&amp; lib439EC7DD_hud_team[p] != 0 &amp;&amp; lib439EC7DD_hud_team[p] != ctl) { GameOver(p, c_gameOverDefeat, true, true); }
+                            p = p + 1;
+                        }
+                        p = 1;
+                        while (p &lt;= 13) {
+                            if (PlayerStatus(p) == c_playerStatusActive &amp;&amp; lib439EC7DD_hud_team[p] == ctl) { GameOver(p, c_gameOverVictory, true, true); }
+                            p = p + 1;
+                        }
+                    }
+                    return true;
+                }
+                bool lib439EC7DD_hud_Build (bool testConds, bool runActions) {
+                    int p;
+                    int rows;
+                    int y;
+                    text body;
+                    Wait(1.0, c_timeGame);
+                    lib439EC7DD_hud_Teams();
+                    lib439EC7DD_hud_width = 330;
+                    p = 1;
+                    while (p &lt;= 13) {
+                        if (lib439EC7DD_hud_team[p] == p &amp;&amp; lib439EC7DD_hud_TeamSize(p) &gt; 1) { lib439EC7DD_hud_width = 460; }
+                        p = p + 1;
+                    }
+                    // --- help button top-left (players only; observers can&apos;t click) ---
+                    lib439EC7DD_hud_timerDlg = lib439EC7DD_hud_Box(66, 66, c_anchorTopRight, 325, 48);
+                    lib439EC7DD_hud_helpBtn = lib439EC7DD_hud_Ctrl(lib439EC7DD_hud_timerDlg, c_triggerControlTypeButton, 50, 50, c_anchorCenter, 0, 0, StringToText(&quot;?&quot;));
+                    DialogControlSetPropertyAsText(lib439EC7DD_hud_helpBtn, c_triggerControlPropertyTooltip, lib439EC7DD_hud_G(), StringToText(&quot;Rules&quot;));
+                    // --- show / hide score table (per player) ---
+                    lib439EC7DD_hud_scoreHdrDlg = lib439EC7DD_hud_Box(66, 66, c_anchorTopRight, 255, 48);
+                    lib439EC7DD_hud_scoreBtn = lib439EC7DD_hud_Ctrl(lib439EC7DD_hud_scoreHdrDlg, c_triggerControlTypeButton, 50, 50, c_anchorCenter, 0, 0, StringToText(&quot;S&quot;));
+                    DialogControlSetPropertyAsText(lib439EC7DD_hud_scoreBtn, c_triggerControlPropertyTooltip, lib439EC7DD_hud_G(), StringToText(&quot;Show / hide score&quot;));
+                    // buttons follow the default observed player: for a player that is himself, for observers it is always player 14 (no buttons), even after switching to a player&apos;s view
+                    DialogControlSetObservedType(lib439EC7DD_hud_timerDlg, c_triggerObservedTypeDefaultObservedPlayerId);
+                    DialogControlSetObservedType(lib439EC7DD_hud_helpBtn, c_triggerObservedTypeDefaultObservedPlayerId);
+                    DialogControlSetObservedType(lib439EC7DD_hud_scoreHdrDlg, c_triggerObservedTypeDefaultObservedPlayerId);
+                    DialogControlSetObservedType(lib439EC7DD_hud_scoreBtn, c_triggerObservedTypeDefaultObservedPlayerId);
+                    // --- timer, score and bounty: standard timer windows (visible to everyone, incl. observers) ---
+                    lib439EC7DD_hud_twTimer = lib439EC7DD_hud_TW(StringToText(&quot;Next round:&quot;));
+                    lib439EC7DD_hud_twScore[0] = lib439EC7DD_hud_TW(StringToText(&quot;Score&quot;));
+                    p = 1;
+                    while (p &lt;= 13) {
+                        if (lib439EC7DD_hud_team[p] == p) {
+                            lib439EC7DD_hud_hasRow[p] = true;
+                            lib439EC7DD_hud_shownScore[p] = 0;
+                        }
+                        p = p + 1;
+                    }
+                    lib439EC7DD_hud_ScoreRefresh();
+                    lib439EC7DD_hud_bRows = 0;
+                    p = 1;
+                    while (p &lt;= 15) {
+                        if (lib439EC7DD_hud_IsReal(p)) {
+                            lib439EC7DD_hud_bList[lib439EC7DD_hud_bRows] = p;
+                            lib439EC7DD_hud_bRows = lib439EC7DD_hud_bRows + 1;
+                        }
+                        p = p + 1;
+                    }
+                    lib439EC7DD_hud_twBounty[0] = lib439EC7DD_hud_TW(StringToText(&quot;Bounty earned&quot;));
+                    TimerWindowSetGapWidth(lib439EC7DD_hud_twBounty[0], lib439EC7DD_hud_bGapW);
+                    y = 0;
+                    while (y &lt; lib439EC7DD_hud_bRows) {
+                        rows = lib439EC7DD_hud_TW(StringToText(&quot; &quot;));
+                        lib439EC7DD_hud_twBounty[y + 1] = rows;
+                        TimerWindowShowBorder(rows, false);
+                        TimerWindowSetColor(rows, c_timerWindowColorBackground, Color(0.0, 0.0, 0.0), 100.0);
+                        TimerWindowSetGapWidth(rows, 0);
+                        TimerWindowSetFixedHeight(rows, lib439EC7DD_hud_bRowH);
+                        y = y + 1;
+                    }
+                    lib439EC7DD_hud_BountyRefresh();
+                    // tighter gaps between the stacked timer windows
+                    TimerWindowSetAnchor(lib439EC7DD_hud_twTimer, c_anchorTopRight, 0, 0);
+                    TimerWindowSetAnchor(lib439EC7DD_hud_twScore[0], c_anchorTopRight, 0, -16);
+                    TimerWindowSetAnchor(lib439EC7DD_hud_twBounty[0], c_anchorTopRight, 0, -12);
+                    y = 0;
+                    while (y &lt; lib439EC7DD_hud_bRows) {
+                        if (y == 0) { TimerWindowSetAnchor(lib439EC7DD_hud_twBounty[1], c_anchorTopRight, lib439EC7DD_hud_bOffX, lib439EC7DD_hud_bOff1 - lib439EC7DD_hud_bOffRow * lib439EC7DD_hud_bRows); }
+                        else { TimerWindowSetAnchor(lib439EC7DD_hud_twBounty[y + 1], c_anchorTopRight, lib439EC7DD_hud_bOffX, lib439EC7DD_hud_bOffK); }
+                        y = y + 1;
+                    }
+                    // --- help / rules panel ---
+                    body = StringToText(&quot;- Whoever holds the red circle when the timer runs out gets a point. First to &quot; + IntToString(lib439EC7DD_gv_maxRounds) + &quot; points wins.&lt;n/&gt;- Priorities are: Ground &gt; Cloaked ground &gt; Air &gt; Cloaked air &gt; Temporary units&lt;n/&gt;- While your units are on the red circle, you gain &quot; + IntToString(lib439EC7DD_gv_mineralsPerSecond) + &quot; minerals per second.&lt;n/&gt;- Bounty: killing an enemy unit gives you &quot; + IntToString(lib439EC7DD_gv_bountyPercent) + &quot;% of its cost.&quot;);
+                    lib439EC7DD_hud_infoDlg = lib439EC7DD_hud_Box(500, 240, c_anchorTopRight, 255, 118);
+                    lib439EC7DD_hud_Lbl(lib439EC7DD_hud_infoDlg, 440, 30, c_anchorTop, 0, 28, StringToText(&quot;BEAST OF THE HILL + BOUNTY&quot;), &quot;ModCenterSize20Bold&quot;);
+                    lib439EC7DD_hud_Lbl(lib439EC7DD_hud_infoDlg, 440, 160, c_anchorTopLeft, 30, 64, body, &quot;DebugProgressPanelLabelTopLeft&quot;);
+                    // every slot 0..15, so observers and referees get the HUD and can use its buttons too
+                    p = 0;
+                    while (p &lt;= 15) {
+                        lib439EC7DD_hud_infoShown[p] = false;
+                        lib439EC7DD_hud_scoreShown[p] = true;
+                        lib439EC7DD_hud_bountyShown[p] = true;
+                        p = p + 1;
+                    }
+                    DialogControlSetVisible(lib439EC7DD_hud_timerDlg, lib439EC7DD_hud_G(), true);
+                    DialogControlSetVisible(lib439EC7DD_hud_scoreHdrDlg, lib439EC7DD_hud_G(), true);
+                    // observers (player 14, see hud_Observer) can&apos;t click trigger buttons, so they get no buttons
+                    DialogControlSetVisible(lib439EC7DD_hud_timerDlg, PlayerGroupSingle(14), false);
+                    DialogControlSetVisible(lib439EC7DD_hud_scoreHdrDlg, PlayerGroupSingle(14), false);
+                    // bounty table: observers only
+                    p = 0;
+                    while (p &lt;= 15) {
+                        if (p != 14) {
+                            rows = 0;
+                            while (rows &lt;= lib439EC7DD_hud_bRows) {
+                                TimerWindowShow(lib439EC7DD_hud_twBounty[rows], PlayerGroupSingle(p), false);
+                                rows = rows + 1;
+                            }
+                            lib439EC7DD_hud_bountyShown[p] = false;
+                        }
+                        p = p + 1;
+                    }
+                    DialogControlSetVisible(lib439EC7DD_hud_infoDlg, lib439EC7DD_hud_G(), false);
+                    lib439EC7DD_hud_lastT = -1;
+                    lib439EC7DD_hud_lastWarn = -1;
+                    lib439EC7DD_hud_built = true;
+                    return true;
+                }
+                void lib439EC7DD_hud_Warn (int t) {
+                    text msg;
+                    if (t == 120) { msg = StringToText(&quot;Next round in 2 minutes!&quot;); }
+                    else if (t == 60) { msg = StringToText(&quot;Next round in 1 minute!&quot;); }
+                    else { msg = StringToText(&quot;Next round in &quot; + IntToString(t) + &quot; seconds!&quot;); }
+                    UIDisplayMessage(lib439EC7DD_hud_G(), c_messageAreaDirective, msg);
+                    // observers keep directive messages on screen, so clear it for everyone after a few seconds
+                    lib439EC7DD_hud_warnId = lib439EC7DD_hud_warnId + 1;
+                    TriggerExecute(lib439EC7DD_hud_fadeTrig, true, false);
+                    if (t == 120 || t == 60 || t == 30 || t == 10) {
+                        PingCreate(lib439EC7DD_hud_G(), &quot;PingSimple&quot;, lib439EC7DD_gv_centerPoint, Color(100.0, 50.0, 0.0), 4.0);
+                        PingSetObserver(PingLastCreated(), true);
+                    }
+                }
+                bool lib439EC7DD_hud_Fade (bool testConds, bool runActions) {
+                    int id;
+                    id = lib439EC7DD_hud_warnId;
+                    Wait(3.0, c_timeReal);
+                    if (id == lib439EC7DD_hud_warnId) {
+                        UIClearMessages(lib439EC7DD_hud_G(), c_messageAreaDirective);
+                    }
+                    return true;
+                }
+                bool lib439EC7DD_hud_Tick (bool testConds, bool runActions) {
+                    int p;
+                    int t;
+                    if (lib439EC7DD_hud_built == false) {
+                        return true;
+                    }
+                    t = lib439EC7DD_gv_roundTimeRemaining;
+                    if (t &lt; 0) {
+                        t = 0;
+                    }
+                    if (t != lib439EC7DD_hud_lastWarn &amp;&amp; (t == 120 || t == 60 || t == 30 || t == 20 || t == 10 || t == 5)) {
+                        lib439EC7DD_hud_lastWarn = t;
+                        lib439EC7DD_hud_Warn(t);
+                    }
+                    if (t != lib439EC7DD_hud_lastT) {
+                        lib439EC7DD_hud_lastT = t;
+                        TimerWindowSetFormat(lib439EC7DD_hud_twTimer, TextTimeFormat(StringToText(&quot;&lt;min2/&gt;:&lt;sec2/&gt;&quot;), t));
+                    }
+                    p = 1;
+                    while (p &lt;= 13) {
+                        if (lib439EC7DD_hud_hasRow[p] == true &amp;&amp; lib439EC7DD_gv_playerScore[p] != lib439EC7DD_hud_shownScore[p]) {
+                            lib439EC7DD_hud_shownScore[p] = lib439EC7DD_gv_playerScore[p];
+                            lib439EC7DD_hud_ScoreRefresh();
+                        }
+                        p = p + 1;
+                    }
+                    if (lib439EC7DD_hud_bDirty) {
+                        lib439EC7DD_hud_bDirty = false;
+                        lib439EC7DD_hud_BountyRefresh();
+                    }
+                    return true;
+                }
+                bool lib439EC7DD_hud_Click (bool testConds, bool runActions) {
+                    int p;
+                    int c;
+                    p = EventPlayer();
+                    c = EventDialogControl();
+                    if (p &lt; 0 || p &gt; 15) { return true; }
+                    // rules panel and score table toggle per player
+                    if (c == lib439EC7DD_hud_helpBtn) {
+                        lib439EC7DD_hud_infoShown[p] = !lib439EC7DD_hud_infoShown[p];
+                        DialogControlSetVisible(lib439EC7DD_hud_infoDlg, PlayerGroupSingle(p), lib439EC7DD_hud_infoShown[p]);
+                    }
+                    if (c == lib439EC7DD_hud_scoreBtn) {
+                        lib439EC7DD_hud_scoreShown[p] = !lib439EC7DD_hud_scoreShown[p];
+                        TimerWindowShow(lib439EC7DD_hud_twScore[0], PlayerGroupSingle(p), lib439EC7DD_hud_scoreShown[p]);
+                    }
+                    return true;
+                }
+                // --- lobby option 8 &quot;Starting workers&quot;: value 2 = classic 12 workers (+4) ---
+                void lib439EC7DD_hud_SetFood (string u, string v) {
+                    int p;
+                    p = 0;
+                    while (p &lt;= 15) {
+                        CatalogFieldValueSet(c_gameCatalogUnit, u, &quot;Food&quot;, p, v);
+                        p = p + 1;
+                    }
+                }
+                // ring of 24 spots around the town hall, in the same order as the race Starting Units offsets
+                void lib439EC7DD_hud_Ring () {
+                    int k;
+                    k = 0;
+                    // (0,-3)..(3,-3), (3,-2)..(3,3), (2,3)..(-3,3), (-3,2)..(-3,-3), (-2,-3),(-1,-3)
+                    while (k &lt; 24) {
+                        if (k &lt;= 3) { lib439EC7DD_hud_rx[k] = k; lib439EC7DD_hud_ry[k] = -3; }
+                        else if (k &lt;= 9) { lib439EC7DD_hud_rx[k] = 3; lib439EC7DD_hud_ry[k] = k - 6; }
+                        else if (k &lt;= 15) { lib439EC7DD_hud_rx[k] = 12 - k; lib439EC7DD_hud_ry[k] = 3; }
+                        else if (k &lt;= 21) { lib439EC7DD_hud_rx[k] = -3; lib439EC7DD_hud_ry[k] = 18 - k; }
+                        else { lib439EC7DD_hud_rx[k] = k - 24; lib439EC7DD_hud_ry[k] = -3; }
+                        k = k + 1;
+                    }
+                }
+                bool lib439EC7DD_hud_IsCorner (int k) {
+                    int i;
+                    i = ModI(k + 24, 24);
+                    return (AbsI(lib439EC7DD_hud_rx[i]) == 3 &amp;&amp; AbsI(lib439EC7DD_hud_ry[i]) == 3);
+                }
+                bool lib439EC7DD_hud_Workers (bool testConds, bool runActions) {
+                    int p;
+                    int i;
+                    int k;
+                    int n;
+                    int a;
+                    int b;
+                    int dir;
+                    int placed;
+                    int cur;
+                    string race;
+                    string w;
+                    string ab;
+                    unit hall;
+                    unit best;
+                    unit u;
+                    unitgroup g;
+                    unitgroup made;
+                    unitgroup ws;
+                    point hp;
+                    point q;
+                    fixed d;
+                    fixed bd;
+                    bool[25] occ;
+                    bool any;
+                    if (StringToInt(GameAttributeGameValue(&quot;8&quot;)) != 2) { return true; }
+                    // classic supply: CC / Nexus 15, Hatchery 6 (and their upgrades)
+                    lib439EC7DD_hud_SetFood(&quot;CommandCenter&quot;, &quot;15&quot;);
+                    lib439EC7DD_hud_SetFood(&quot;CommandCenterFlying&quot;, &quot;15&quot;);
+                    lib439EC7DD_hud_SetFood(&quot;OrbitalCommand&quot;, &quot;15&quot;);
+                    lib439EC7DD_hud_SetFood(&quot;OrbitalCommandFlying&quot;, &quot;15&quot;);
+                    lib439EC7DD_hud_SetFood(&quot;PlanetaryFortress&quot;, &quot;15&quot;);
+                    lib439EC7DD_hud_SetFood(&quot;Nexus&quot;, &quot;15&quot;);
+                    lib439EC7DD_hud_SetFood(&quot;Hatchery&quot;, &quot;6&quot;);
+                    lib439EC7DD_hud_SetFood(&quot;Lair&quot;, &quot;6&quot;);
+                    lib439EC7DD_hud_SetFood(&quot;Hive&quot;, &quot;6&quot;);
+                    lib439EC7DD_hud_Ring();
+                    Wait(0.0625, c_timeGame);
+                    p = 1;
+                    while (p &lt;= 13) {
+                        if (PlayerStatus(p) == c_playerStatusActive) {
+                            race = PlayerRace(p);
+                            w = &quot;&quot;;
+                            if (race == &quot;Terr&quot;) { w = &quot;SCV&quot;; ab = &quot;SCVHarvest&quot;; }
+                            if (race == &quot;Prot&quot;) { w = &quot;Probe&quot;; ab = &quot;ProbeHarvest&quot;; }
+                            if (race == &quot;Zerg&quot;) { w = &quot;Drone&quot;; ab = &quot;DroneHarvest&quot;; }
+                            g = UnitGroup(null, p, RegionEntireMap(), UnitFilter((1 &lt;&lt; c_targetFilterStructure), 0, 0, 0), 0);
+                            if (w != &quot;&quot; &amp;&amp; UnitGroupCount(g, c_unitCountAlive) &gt; 0) {
+                                hall = UnitGroupUnit(g, 1);
+                                hp = UnitGetPosition(hall);
+                                // which ring spots already hold a starting worker
+                                ws = UnitGroup(w, p, RegionCircle(hp, 6.0), null, 0);
+                                any = false;
+                                k = 0;
+                                while (k &lt; 24) {
+                                    occ[k] = false;
+                                    q = PointWithOffset(hp, IntToFixed(lib439EC7DD_hud_rx[k]), IntToFixed(lib439EC7DD_hud_ry[k]));
+                                    n = UnitGroupCount(ws, c_unitCountAll);
+                                    i = 1;
+                                    while (i &lt;= n) {
+                                        if (DistanceBetweenPoints(q, UnitGetPosition(UnitGroupUnit(ws, i))) &lt; 0.9) { occ[k] = true; any = true; }
+                                        i = i + 1;
+                                    }
+                                    k = k + 1;
+                                }
+                                made = UnitGroupEmpty();
+                                if (any) {
+                                    // find the ends of the occupied arc: a = first occupied after a free spot, b = last occupied before a free spot
+                                    a = -1;
+                                    b = -1;
+                                    k = 0;
+                                    while (k &lt; 24) {
+                                        if (occ[k] &amp;&amp; !occ[ModI(k + 23, 24)]) { a = k; }
+                                        if (occ[k] &amp;&amp; !occ[ModI(k + 1, 24)]) { b = k; }
+                                        k = k + 1;
+                                    }
+                                    // continue from the end that has already turned a corner (keeps the L-shaped line going)
+                                    dir = 1;
+                                    if (a &gt;= 0 &amp;&amp; lib439EC7DD_hud_IsCorner(a + 1) &amp;&amp; !lib439EC7DD_hud_IsCorner(b - 1)) { dir = -1; }
+                                    if (dir == 1) { cur = b; } else { cur = a; }
+                                    placed = 0;
+                                    k = 0;
+                                    while (placed &lt; 4 &amp;&amp; k &lt; 24) {
+                                        cur = ModI(cur + dir + 24, 24);
+                                        if (!occ[cur]) {
+                                            q = PointWithOffset(hp, IntToFixed(lib439EC7DD_hud_rx[cur]), IntToFixed(lib439EC7DD_hud_ry[cur]));
+                                            UnitCreate(1, w, c_unitCreateIgnorePlacement, p, q, AngleBetweenPoints(q, hp));
+                                            UnitGroupAdd(made, UnitLastCreated());
+                                            occ[cur] = true;
+                                            placed = placed + 1;
+                                        }
+                                        k = k + 1;
+                                    }
+                                }
+                                else {
+                                    UnitCreate(4, w, 0, p, hp, 270.0);
+                                    made = UnitLastCreatedGroup();
+                                }
+                                g = UnitGroup(null, c_playerAny, RegionCircle(hp, 15.0), null, 0);
+                                best = null;
+                                bd = 999.0;
+                                n = UnitGroupCount(g, c_unitCountAll);
+                                i = 1;
+                                while (i &lt;= n) {
+                                    u = UnitGroupUnit(g, i);
+                                    if (StringContains(UnitGetType(u), &quot;MineralField&quot;, c_stringAnywhere, c_stringNoCase)) {
+                                        d = DistanceBetweenPoints(hp, UnitGetPosition(u));
+                                        if (d &lt; bd) { bd = d; best = u; }
+                                    }
+                                    i = i + 1;
+                                }
+                                if (best != null) {
+                                    n = UnitGroupCount(made, c_unitCountAll);
+                                    i = 1;
+                                    while (i &lt;= n) {
+                                        UnitIssueOrder(UnitGroupUnit(made, i), OrderTargetingUnit(AbilityCommand(ab, 0), best), c_orderQueueReplace);
+                                        i = i + 1;
+                                    }
+                                }
+                            }
+                        }
+                        p = p + 1;
+                    }
+                    return true;
+                }
+                // --- no building on the red circle: cancel any build / land order aimed at it ---
+                bool lib439EC7DD_hud_BuildBlock (bool testConds, bool runActions) {
+                    order o;
+                    string ab;
+                    unit u;
+                    o = EventUnitOrder();
+                    if (OrderGetTargetType(o) != c_orderTargetPoint) { return true; }
+                    ab = AbilityCommandGetAbility(OrderGetAbilityCommand(o));
+                    if (!StringContains(ab, &quot;Build&quot;, c_stringAnywhere, c_stringNoCase) &amp;&amp; !StringContains(ab, &quot;Land&quot;, c_stringAnywhere, c_stringNoCase)) { return true; }
+                    if (DistanceBetweenPoints(OrderGetTargetPoint(o), lib439EC7DD_gv_centerPoint) &gt; lib439EC7DD_gv_captureRadius + 2.0) { return true; }
+                    u = EventUnit();
+                    UnitIssueOrder(u, Order(AbilityCommand(&quot;stop&quot;, 0)), c_orderQueueReplace);
+                    UIDisplayMessage(PlayerGroupSingle(UnitGetOwner(u)), c_messageAreaError, StringToText(&quot;You can&apos;t build on the red circle!&quot;));
+                    return true;
+                }
+                // --- red circle: carried by an invisible dummy unit, so nearby buildings can&apos;t remove it ---
+                bool lib439EC7DD_hud_Circle (bool testConds, bool runActions) {
+                    int p;
+                    Wait(0.0625, c_timeGame);
+                    // owned by hostile player 15, whose vision is shared with everyone, so the circle shows through fog (the dummy has no sight radius)
+                        // snap to whole cells so the 6x6 no-build footprint (unit CZNoBuildCircle) sits centred under the circle
+                    lib439EC7DD_gv_centerPoint = Point(IntToFixed(RoundI(PointGetX(lib439EC7DD_gv_centerPoint))), IntToFixed(RoundI(PointGetY(lib439EC7DD_gv_centerPoint))));
+                    lib439EC7DD_gv_captureZone = RegionCircle(lib439EC7DD_gv_centerPoint, lib439EC7DD_gv_captureRadius);
+                    lib439EC7DD_hud_Clear(lib439EC7DD_gv_centerPoint, lib439EC7DD_gv_captureRadius);
+                    lib439EC7DD_hud_Unfog(lib439EC7DD_gv_centerPoint, lib439EC7DD_gv_captureRadius + 1.0);
+                    UnitCreate(1, &quot;InvisibleTargetDummy2&quot;, 0, 15, lib439EC7DD_gv_centerPoint, 270.0);
+                    UnitSetPosition(UnitLastCreated(), lib439EC7DD_gv_centerPoint, false);
+                                p = 0;
+                    while (p &lt;= 14) { PlayerSetAlliance(15, c_allianceIdVision, p, true); p = p + 1; }
+                    return true;
+                }
+                // --- observers: the mod&apos;s GameUI data sets DefaultObservedPlayerId = 14, so observers in &quot;Everyone&quot; view see what player 14 sees.
+                // Every player shares vision with 14 so observers still see the whole game; UI shown only to 14 is observers-only.
+                bool lib439EC7DD_hud_Observer (bool testConds, bool runActions) {
+                    int p;
+                    p = 0;
+                    while (p &lt;= 13) {
+                        PlayerSetAlliance(p, c_allianceIdVision, 14, true);
+                        PlayerSetAlliance(p, c_allianceIdPassive, 14, true);
+                        PlayerSetAlliance(p, c_allianceIdControl, 14, true);
+                        PlayerSetAlliance(p, c_allianceIdDefeat, 14, true);
+                        libNtve_gf_SetAllianceOneWay(14, p, libNtve_ge_AllianceSetting_Neutral);
+                        p = p + 1;
+                    }
+                    return true;
+                }
+                // --- a structure started on the red circle anyway (order not intercepted): remove it and give everything back
+                bool lib439EC7DD_hud_NoBuild (bool testConds, bool runActions) {
+                    unit u;
+                    int o;
+                    string ty;
+                    fixed r;
+                    u = EventUnitProgressUnit(); if (u == null || !UnitFilterMatch(u, UnitGetOwner(u), UnitFilter((1 &lt;&lt; c_targetFilterStructure), 0, 0, 0))) { u = EventUnit(); }
+                    o = UnitGetOwner(u);
+                    if (o &lt; 1 || o &gt; 13) { return true; }
+                    if (!UnitFilterMatch(u, o, UnitFilter((1 &lt;&lt; c_targetFilterStructure), 0, 0, 0))) { return true; }
+                    r = UnitGetPropertyFixed(u, c_unitPropRadius, c_unitPropCurrent);
+                    if (DistanceBetweenPoints(UnitGetPosition(u), lib439EC7DD_gv_centerPoint) &gt; lib439EC7DD_gv_captureRadius + r * 1.4) { return true; }
+                    ty = UnitGetType(u);
+                    PlayerModifyPropertyInt(o, c_playerPropMinerals, c_playerPropOperAdd, UnitTypeGetCost(ty, c_unitCostMinerals));
+                    PlayerModifyPropertyInt(o, c_playerPropVespene, c_playerPropOperAdd, UnitTypeGetCost(ty, c_unitCostVespene));
+                    // a Zerg drone turned into the building: give the drone back too
+                    if (PlayerRace(o) == &quot;Zerg&quot; &amp;&amp; !StringContains(ty, &quot;CreepTumor&quot;, c_stringAnywhere, c_stringNoCase) &amp;&amp; !StringContains(ty, &quot;Nydus&quot;, c_stringAnywhere, c_stringNoCase)) {
+                        UnitCreate(1, &quot;Drone&quot;, c_unitCreateIgnorePlacement, o, UnitGetPosition(u), 270.0);
+                    }
+                    UnitRemove(u);
+                    UIDisplayMessage(PlayerGroupSingle(o), c_messageAreaError, StringToText(&quot;You can&apos;t build on the red circle!&quot;));
+                    return true;
+                }
+                // --- a player left the game: drop them from the score and bounty tables
+                bool lib439EC7DD_hud_Left (bool testConds, bool runActions) {
+                    int p;
+                    int q;
+                    int lead;
+                    int nl;
+                    int k;
+                    p = EventPlayer();
+                    if (p &lt; 1 || p &gt; 15 || lib439EC7DD_hud_built == false) { return true; }
+                    // score: remove from the team; if the team&apos;s lead left, the next member becomes the lead (same points)
+                    lead = lib439EC7DD_hud_team[p];
+                    if (lead != 0) {
+                        lib439EC7DD_hud_team[p] = 0;
+                        lib439EC7DD_hud_hasRow[p] = false;
+                        if (lead == p) {
+                            nl = 0;
+                            q = 1;
+                            while (q &lt;= 13) {
+                                if (lib439EC7DD_hud_team[q] == p) {
+                                    if (nl == 0) { nl = q; }
+                                    lib439EC7DD_hud_team[q] = nl;
+                                }
+                                q = q + 1;
+                            }
+                            if (nl != 0) {
+                                lib439EC7DD_hud_hasRow[nl] = true;
+                                lib439EC7DD_hud_shownScore[nl] = lib439EC7DD_gv_playerScore[nl];
+                            }
+                        }
+                        lib439EC7DD_hud_ScoreRefresh();
+                    }
+                    // bounty: remove the row, hide the last value window, re-anchor the first one to the shorter list
+                    k = 0;
+                    while (k &lt; lib439EC7DD_hud_bRows) {
+                        if (lib439EC7DD_hud_bList[k] == p) { break; }
+                        k = k + 1;
+                    }
+                    if (k &lt; lib439EC7DD_hud_bRows) {
+                        while (k &lt; lib439EC7DD_hud_bRows - 1) {
+                            lib439EC7DD_hud_bList[k] = lib439EC7DD_hud_bList[k + 1];
+                            k = k + 1;
+                        }
+                        TimerWindowShow(lib439EC7DD_hud_twBounty[lib439EC7DD_hud_bRows], lib439EC7DD_hud_G(), false);
+                        lib439EC7DD_hud_bRows = lib439EC7DD_hud_bRows - 1;
+                        if (lib439EC7DD_hud_bRows &gt; 0) {
+                            TimerWindowSetAnchor(lib439EC7DD_hud_twBounty[1], c_anchorTopRight, lib439EC7DD_hud_bOffX, lib439EC7DD_hud_bOff1 - lib439EC7DD_hud_bOffRow * lib439EC7DD_hud_bRows);
+                        }
+                        else {
+                            TimerWindowShow(lib439EC7DD_hud_twBounty[0], lib439EC7DD_hud_G(), false);
+                        }
+                        lib439EC7DD_hud_BountyRefresh();
+                    }
+                    return true;
+                }
+                void lib439EC7DD_hud_Init () {
+                    trigger t;
+                    t = TriggerCreate(&quot;lib439EC7DD_hud_Circle&quot;);
+                    TriggerAddEventMapInit(t);
+                    lib439EC7DD_hud_fadeTrig = TriggerCreate(&quot;lib439EC7DD_hud_Fade&quot;);
+                    t = TriggerCreate(&quot;lib439EC7DD_hud_Build&quot;);
+                    TriggerAddEventMapInit(t);
+                    t = TriggerCreate(&quot;lib439EC7DD_hud_Tick&quot;);
+                    TriggerAddEventTimePeriodic(t, 0.5, c_timeGame);
+                    t = TriggerCreate(&quot;lib439EC7DD_hud_Click&quot;);
+                    TriggerAddEventDialogControl(t, c_playerAny, c_invalidDialogControlId, c_triggerControlEventTypeClick);
+                    t = TriggerCreate(&quot;lib439EC7DD_hud_Workers&quot;);
+                    TriggerAddEventMapInit(t);
+                    t = TriggerCreate(&quot;lib439EC7DD_hud_Round&quot;);
+                    TriggerAddEventTimePeriodic(t, 1.4, c_timeGame);
+                    t = TriggerCreate(&quot;lib439EC7DD_hud_Observer&quot;);
+                    TriggerAddEventMapInit(t);
+                    t = TriggerCreate(&quot;lib439EC7DD_hud_Left&quot;);
+                    TriggerAddEventPlayerLeft(t, c_playerAny, c_gameResultUndecided);
+                }
+            </ScriptCode>
+            <InitFunc>lib439EC7DD_hud_Init</InitFunc>
+        </Element>
+        <Element Type="Variable" Id="58818BCD">
+            <VariableType>
+                <Type Value="point"/>
+            </VariableType>
+            <Value Type="Param" Library="439EC7DD" Id="444F6E68"/>
+        </Element>
+        <Element Type="Param" Id="444F6E68">
+            <Preset Type="PresetValue" Library="Ntve" Id="568CBBF1"/>
+        </Element>
+        <Element Type="Variable" Id="67B5F3FD">
+            <VariableType>
+                <Type Value="fixed"/>
+            </VariableType>
+            <Value Type="Param" Library="439EC7DD" Id="3407C2A1"/>
+        </Element>
+        <Element Type="Param" Id="3407C2A1">
+            <Value>10.0</Value>
+            <ValueType Type="fixed"/>
+        </Element>
+        <Element Type="Variable" Id="E74AC9A1">
+            <VariableType>
+                <Type Value="int"/>
+            </VariableType>
+            <Value Type="Param" Library="439EC7DD" Id="E71D1AD9"/>
+        </Element>
+        <Element Type="Param" Id="E71D1AD9">
+            <Value>0</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="Variable" Id="F48D1177">
+            <VariableType>
+                <Type Value="bool"/>
+            </VariableType>
+            <Value Type="Param" Library="439EC7DD" Id="DE886993"/>
+        </Element>
+        <Element Type="Param" Id="DE886993">
+            <Value>false</Value>
+            <ValueType Type="bool"/>
+        </Element>
+        <Element Type="Variable" Id="14AB449F">
+            <VariableType>
+                <Type Value="int"/>
+            </VariableType>
+            <Value Type="Param" Library="439EC7DD" Id="8178FDB8"/>
+        </Element>
+        <Element Type="Param" Id="8178FDB8">
+            <Value>0</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="Variable" Id="B7FC7E86">
+            <VariableType>
+                <Type Value="int"/>
+            </VariableType>
+            <Value Type="Param" Library="439EC7DD" Id="0D719A43"/>
+        </Element>
+        <Element Type="Param" Id="0D719A43">
+            <Value>0</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="Variable" Id="CC2E161C">
+            <VariableType>
+                <Type Value="int"/>
+            </VariableType>
+            <Value Type="Param" Library="439EC7DD" Id="6ADDDE48"/>
+        </Element>
+        <Element Type="Param" Id="6ADDDE48">
+            <Value>0</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="Variable" Id="795959C0">
+            <VariableType>
+                <Type Value="fixed"/>
+            </VariableType>
+            <Value Type="Param" Library="439EC7DD" Id="5953738C"/>
+        </Element>
+        <Element Type="Param" Id="5953738C">
+            <Value>7.5</Value>
+            <ValueType Type="fixed"/>
+        </Element>
+        <Element Type="Trigger" Id="3683B92F">
+            <Event Type="FunctionCall" Library="439EC7DD" Id="E2543B9C"/>
+            <Condition Type="FunctionCall" Library="439EC7DD" Id="214D9E30"/>
+            <Condition Type="FunctionCall" Library="439EC7DD" Id="F70F867E"/>
+            <Condition Type="FunctionCall" Library="439EC7DD" Id="B8609EDC"/>
+            <Condition Type="FunctionCall" Library="439EC7DD" Id="2A70A01D"/>
+            <Condition Type="FunctionCall" Library="439EC7DD" Id="B7242215"/>
+            <Action Type="FunctionCall" Library="439EC7DD" Id="10031B92"/>
+            <Action Type="FunctionCall" Library="439EC7DD" Id="0B113953"/>
+            <Action Type="FunctionCall" Library="439EC7DD" Id="4AB63888"/>
+            <Action Type="FunctionCall" Library="439EC7DD" Id="F9AAD647"/>
+            <Action Type="FunctionCall" Library="439EC7DD" Id="7F48ADC6"/>
+            <Action Type="FunctionCall" Library="439EC7DD" Id="BF83C43E"/>
+        </Element>
+        <Element Type="FunctionCall" Id="E2543B9C">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000090"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="6255296A"/>
+        </Element>
+        <Element Type="Param" Id="6255296A">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000159"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="C84C7A78"/>
+        </Element>
+        <Element Type="FunctionCall" Id="214D9E30">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="C439C375"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="8103725A"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="1B1DDBA5"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="6C14057F"/>
+        </Element>
+        <Element Type="Param" Id="8103725A">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="ABB380C4"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="F434739C"/>
+        </Element>
+        <Element Type="FunctionCall" Id="F434739C">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="CAD5046C"/>
+        </Element>
+        <Element Type="Param" Id="1B1DDBA5">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="51567265"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="E123C832"/>
+        </Element>
+        <Element Type="Param" Id="6C14057F">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="4A15EC5F"/>
+            <Value>15</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="FunctionCall" Id="F70F867E">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="C439C375"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="56E1FA3A"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="C7DEAAEF"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="FC5130F8"/>
+        </Element>
+        <Element Type="Param" Id="56E1FA3A">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="ABB380C4"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="8AAF08E1"/>
+        </Element>
+        <Element Type="FunctionCall" Id="8AAF08E1">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="390C5C49"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="59E4A8E7"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="3840CF09"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="B860C3AD"/>
+        </Element>
+        <Element Type="Param" Id="59E4A8E7">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="3CE57EA9"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="4B7C937F"/>
+        </Element>
+        <Element Type="FunctionCall" Id="4B7C937F">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000092"/>
+        </Element>
+        <Element Type="Param" Id="3840CF09">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="31F6EE2C"/>
+            <Value>0</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="Param" Id="B860C3AD">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="B6F93566"/>
+            <Value>-;Structure,Missile,Hidden,Hallucination</Value>
+            <ValueType Type="unitfilter"/>
+        </Element>
+        <Element Type="Param" Id="C7DEAAEF">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="51567265"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="1E7A4625"/>
+        </Element>
+        <Element Type="Param" Id="FC5130F8">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="4A15EC5F"/>
+            <Value>true</Value>
+            <ValueType Type="bool"/>
+        </Element>
+        <Element Type="FunctionCall" Id="B8609EDC">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="C439C375"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="BF87FFB1"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="DA7B24DF"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="F461D373"/>
+        </Element>
+        <Element Type="Param" Id="BF87FFB1">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="ABB380C4"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="C0210B02"/>
+        </Element>
+        <Element Type="FunctionCall" Id="C0210B02">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="F1E1DAE1"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="E28014BE"/>
+        </Element>
+        <Element Type="Param" Id="E28014BE">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="323029B8"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="07FF228D"/>
+        </Element>
+        <Element Type="FunctionCall" Id="07FF228D">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000081"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="100FE1EA"/>
+        </Element>
+        <Element Type="Param" Id="100FE1EA">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000140"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="D65F04C6"/>
+        </Element>
+        <Element Type="FunctionCall" Id="D65F04C6">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000092"/>
+        </Element>
+        <Element Type="Param" Id="DA7B24DF">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="51567265"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="1E7A4625"/>
+        </Element>
+        <Element Type="Param" Id="F461D373">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="4A15EC5F"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="BDB5734E"/>
+        </Element>
+        <Element Type="FunctionCall" Id="2A70A01D">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="C439C375"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="B8674C76"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="BF165C20"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="97A170B4"/>
+        </Element>
+        <Element Type="Param" Id="B8674C76">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="ABB380C4"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="A82880DF"/>
+        </Element>
+        <Element Type="FunctionCall" Id="A82880DF">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="CAD5046C"/>
+        </Element>
+        <Element Type="Param" Id="BF165C20">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="51567265"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="500677B2"/>
+        </Element>
+        <Element Type="Param" Id="97A170B4">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="4A15EC5F"/>
+            <Value>0</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="FunctionCall" Id="B7242215">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="C439C375"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="314C2772"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="0CA80A43"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="A0566CAB"/>
+        </Element>
+        <Element Type="Param" Id="314C2772">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="ABB380C4"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="6461C0C8"/>
+        </Element>
+        <Element Type="FunctionCall" Id="6461C0C8">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="CAD5046C"/>
+        </Element>
+        <Element Type="Param" Id="0CA80A43">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="51567265"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="500677B2"/>
+        </Element>
+        <Element Type="Param" Id="A0566CAB">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="4A15EC5F"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="3C9C9075"/>
+        </Element>
+        <Element Type="FunctionCall" Id="3C9C9075">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000081"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="2AC0DF13"/>
+        </Element>
+        <Element Type="Param" Id="2AC0DF13">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000140"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="C93BAB19"/>
+        </Element>
+        <Element Type="FunctionCall" Id="C93BAB19">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000092"/>
+        </Element>
+        <Element Type="FunctionCall" Id="10031B92">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="BDC36557"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="28B45A5C"/>
+        </Element>
+        <Element Type="Param" Id="BDC36557">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="CC2E161C"/>
+        </Element>
+        <Element Type="Param" Id="28B45A5C">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="90869F35"/>
+        </Element>
+        <Element Type="FunctionCall" Id="90869F35">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="CAD5046C"/>
+        </Element>
+        <Element Type="FunctionCall" Id="0B113953">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="EF2C2279"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="F6905157"/>
+        </Element>
+        <Element Type="Param" Id="EF2C2279">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="B7FC7E86"/>
+        </Element>
+        <Element Type="Param" Id="F6905157">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="34A62A66"/>
+        </Element>
+        <Element Type="FunctionCall" Id="34A62A66">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000128"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="302C470D"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="D2D46146"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="091EE549"/>
+        </Element>
+        <Element Type="Param" Id="302C470D">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000206"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="00000088"/>
+        </Element>
+        <Element Type="Param" Id="D2D46146">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000207"/>
+            <Value>100</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="Param" Id="091EE549">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000205"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="13747180"/>
+        </Element>
+        <Element Type="FunctionCall" Id="13747180">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000128"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="70288503"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="C1D0EAB6"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="1A5ECD33"/>
+        </Element>
+        <Element Type="Param" Id="70288503">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000206"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="00000087"/>
+        </Element>
+        <Element Type="Param" Id="C1D0EAB6">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000207"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="B18A3820"/>
+        </Element>
+        <Element Type="Param" Id="1A5ECD33">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000205"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="626477A6"/>
+        </Element>
+        <Element Type="FunctionCall" Id="626477A6">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="DD095653"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="E656FAAF"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="E7C720DC"/>
+        </Element>
+        <Element Type="Param" Id="E656FAAF">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="0DE50046"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="8835F605"/>
+        </Element>
+        <Element Type="Param" Id="E7C720DC">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="9ED4CC3D"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="4A1FDEF0"/>
+        </Element>
+        <Element Type="FunctionCall" Id="4A1FDEF0">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000079"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="74BD750D"/>
+        </Element>
+        <Element Type="Param" Id="74BD750D">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000138"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="957AF7E3"/>
+        </Element>
+        <Element Type="FunctionCall" Id="957AF7E3">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000092"/>
+        </Element>
+        <Element Type="FunctionCall" Id="4AB63888">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="7975CD83"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="F9294D5A"/>
+        </Element>
+        <Element Type="Param" Id="7975CD83">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="14AB449F"/>
+        </Element>
+        <Element Type="Param" Id="F9294D5A">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="FD996099"/>
+        </Element>
+        <Element Type="FunctionCall" Id="FD996099">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000128"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="578DDC49"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="1B408B66"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="0E5C10BB"/>
+        </Element>
+        <Element Type="Param" Id="578DDC49">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000206"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="00000088"/>
+        </Element>
+        <Element Type="Param" Id="1B408B66">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000207"/>
+            <Value>100</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="Param" Id="0E5C10BB">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000205"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="DF5767B9"/>
+        </Element>
+        <Element Type="FunctionCall" Id="DF5767B9">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000128"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="74B2D082"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="19D89875"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="47C4AC8B"/>
+        </Element>
+        <Element Type="Param" Id="74B2D082">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000206"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="00000087"/>
+        </Element>
+        <Element Type="Param" Id="19D89875">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000207"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="B18A3820"/>
+        </Element>
+        <Element Type="Param" Id="47C4AC8B">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000205"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="BE94697F"/>
+        </Element>
+        <Element Type="FunctionCall" Id="BE94697F">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="DD095653"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="5B4DAFA5"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="F553B0F1"/>
+        </Element>
+        <Element Type="Param" Id="5B4DAFA5">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="0DE50046"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="2B19AB91"/>
+        </Element>
+        <Element Type="Param" Id="F553B0F1">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="9ED4CC3D"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="23DCBF79"/>
+        </Element>
+        <Element Type="FunctionCall" Id="23DCBF79">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000079"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="318220BF"/>
+        </Element>
+        <Element Type="Param" Id="318220BF">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000138"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="56811CA9"/>
+        </Element>
+        <Element Type="FunctionCall" Id="56811CA9">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000092"/>
+        </Element>
+        <Element Type="FunctionCall" Id="F9AAD647">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="943DF2F7"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="8AB91476"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="70DC82F4"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="7F139F47"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="297A6802"/>
+        </Element>
+        <Element Type="Param" Id="8AB91476">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="75FC31CB"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="B95AB824"/>
+        </Element>
+        <Element Type="FunctionCall" Id="B95AB824">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="CAD5046C"/>
+        </Element>
+        <Element Type="Param" Id="70DC82F4">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="4AA9487D"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="0794D450"/>
+        </Element>
+        <Element Type="Param" Id="7F139F47">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="C93A9DCB"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="A9A13ADB"/>
+        </Element>
+        <Element Type="Param" Id="297A6802">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="EEF303AC"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="B7FC7E86"/>
+        </Element>
+        <Element Type="FunctionCall" Id="7F48ADC6">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="943DF2F7"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="BBF07366"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="966B7F4D"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="8FFEEE49"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="A3424613"/>
+        </Element>
+        <Element Type="Param" Id="BBF07366">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="75FC31CB"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="EB14D36F"/>
+        </Element>
+        <Element Type="FunctionCall" Id="EB14D36F">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="CAD5046C"/>
+        </Element>
+        <Element Type="Param" Id="966B7F4D">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="4AA9487D"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="D41E85DA"/>
+        </Element>
+        <Element Type="Param" Id="8FFEEE49">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="C93A9DCB"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="A9A13ADB"/>
+        </Element>
+        <Element Type="Param" Id="A3424613">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="EEF303AC"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="14AB449F"/>
+        </Element>
+        <Element Type="FunctionCall" Id="BF83C43E">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000123"/>
+            <ScriptCode>
+                lib439EC7DD_hud_AddBounty(lib439EC7DD_gv_killingPlayer, lib439EC7DD_gv_bountyMinerals, lib439EC7DD_gv_bountyVespene);
+            </ScriptCode>
+        </Element>
+        <Element Type="Variable" Id="7EBF535B">
+            <VariableType>
+                <Type Value="int"/>
+            </VariableType>
+            <Value Type="Param" Library="439EC7DD" Id="58490604"/>
+        </Element>
+        <Element Type="Param" Id="58490604">
+            <Value>0</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="Variable" Id="11DE89B1">
+            <VariableType>
+                <Type Value="playergroup"/>
+            </VariableType>
+            <Value Type="Param" Library="439EC7DD" Id="BFF3664C"/>
+        </Element>
+        <Element Type="Param" Id="BFF3664C">
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="3C50DF72"/>
+        </Element>
+        <Element Type="FunctionCall" Id="3C50DF72">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000056"/>
+        </Element>
+        <Element Type="Variable" Id="66743B9D">
+            <VariableType>
+                <Type Value="int"/>
+            </VariableType>
+            <Value Type="Param" Library="439EC7DD" Id="3724B9CB"/>
+        </Element>
+        <Element Type="Param" Id="3724B9CB">
+            <Value>0</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="Variable" Id="C21DB7D2">
+            <VariableType>
+                <Type Value="unitgroup"/>
+            </VariableType>
+            <Value Type="Param" Library="439EC7DD" Id="26DF1799"/>
+        </Element>
+        <Element Type="Param" Id="26DF1799">
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="5CC6F1D7"/>
+        </Element>
+        <Element Type="FunctionCall" Id="5CC6F1D7">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000104"/>
+        </Element>
+        <Element Type="Trigger" Id="D408621F">
+            <Disabled/>
+            <Event Type="FunctionCall" Library="439EC7DD" Id="5D21783B"/>
+            <Action Type="FunctionCall" Library="439EC7DD" Id="29CAE07C"/>
+            <Action Type="FunctionCall" Library="439EC7DD" Id="0BED9089"/>
+            <Action Type="FunctionCall" Library="439EC7DD" Id="D4FC7D1C"/>
+            <Action Type="FunctionCall" Library="439EC7DD" Id="E09854E0"/>
+            <Action Type="FunctionCall" Library="439EC7DD" Id="DC81CD15"/>
+            <Action Type="FunctionCall" Library="439EC7DD" Id="8A3F4EF6"/>
+            <Action Type="FunctionCall" Library="439EC7DD" Id="A516A1DB"/>
+            <Action Type="FunctionCall" Library="439EC7DD" Id="740D688F"/>
+            <Action Type="FunctionCall" Library="439EC7DD" Id="875F1280"/>
+            <Action Type="FunctionCall" Library="439EC7DD" Id="F79CC530"/>
+        </Element>
+        <Element Type="FunctionCall" Id="5D21783B">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="6D565EB4"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="31E25BA5"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="386851F0"/>
+        </Element>
+        <Element Type="Param" Id="31E25BA5">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="4AB413B8"/>
+            <Value>1.4</Value>
+            <ValueType Type="fixed"/>
+        </Element>
+        <Element Type="Param" Id="386851F0">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="3E8E573F"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="00000013"/>
+        </Element>
+        <Element Type="FunctionCall" Id="29CAE07C">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="6BF81F8D"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="562BBCC3"/>
+        </Element>
+        <Element Type="Param" Id="6BF81F8D">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="C21DB7D2"/>
+        </Element>
+        <Element Type="Param" Id="562BBCC3">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="156B11C9"/>
+        </Element>
+        <Element Type="FunctionCall" Id="156B11C9">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000359"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="1EBDC73F"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="5D28442E"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="CF3872E1"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="8DC0B2CE"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="0C494EBD"/>
+        </Element>
+        <Element Type="Param" Id="1EBDC73F">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000691"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="00000231"/>
+        </Element>
+        <Element Type="Param" Id="5D28442E">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000692"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="2999701E"/>
+        </Element>
+        <Element Type="Param" Id="CF3872E1">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000693"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="CB7D674A"/>
+        </Element>
+        <Element Type="Param" Id="8DC0B2CE">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000695"/>
+            <Value>-;Structure,Missile,Dead,Hidden,Hallucination,Benign</Value>
+            <ValueType Type="unitfilter"/>
+        </Element>
+        <Element Type="Param" Id="0C494EBD">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000694"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="1468BD55"/>
+        </Element>
+        <Element Type="FunctionCall" Id="0BED9089">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="AB570B1D"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="69CF1C53"/>
+        </Element>
+        <Element Type="Param" Id="AB570B1D">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="11DE89B1"/>
+        </Element>
+        <Element Type="Param" Id="69CF1C53">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="1526B87B"/>
+        </Element>
+        <Element Type="FunctionCall" Id="1526B87B">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000056"/>
+        </Element>
+        <Element Type="FunctionCall" Id="D4FC7D1C">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="C4DC760C"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="E1763DB4"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="C34663E0"/>
+        </Element>
+        <Element Type="Param" Id="E1763DB4">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="F96B466D"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="C21DB7D2"/>
+        </Element>
+        <Element Type="FunctionCall" Id="C34663E0">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="15C2C248"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="9441B8B5"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="9D01ABF7"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="AB482814"/>
+        </Element>
+        <Element Type="Param" Id="9D01ABF7">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="1D6C8796"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="45C1FADE"/>
+        </Element>
+        <Element Type="FunctionCall" Id="45C1FADE">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000081"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="F8FACF49"/>
+        </Element>
+        <Element Type="Param" Id="F8FACF49">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000140"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="EA00C6C2"/>
+        </Element>
+        <Element Type="FunctionCall" Id="EA00C6C2">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="19CE733E"/>
+        </Element>
+        <Element Type="Param" Id="AB482814">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="F4B91B76"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="11DE89B1"/>
+        </Element>
+        <Element Type="FunctionCall" Id="E09854E0">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="21E34393"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="D4193A30"/>
+        </Element>
+        <Element Type="Param" Id="21E34393">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="FC2A72AB"/>
+        </Element>
+        <Element Type="Param" Id="D4193A30">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="7F9680E0"/>
+        </Element>
+        <Element Type="FunctionCall" Id="7F9680E0">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000128"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="61BA03F1"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="35D923AD"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="C72C49E9"/>
+        </Element>
+        <Element Type="Param" Id="61BA03F1">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000206"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="00000086"/>
+        </Element>
+        <Element Type="Param" Id="35D923AD">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000207"/>
+            <Value>1</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="Param" Id="C72C49E9">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000205"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="FC2A72AB"/>
+        </Element>
+        <Element Type="FunctionCall" Id="DC81CD15">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000123"/>
+            <ScriptCode>
+                PlayerGroupRemove(lib439EC7DD_gv_playersInZone, 0); PlayerGroupRemove(lib439EC7DD_gv_playersInZone, 13); PlayerGroupRemove(lib439EC7DD_gv_playersInZone, 14); PlayerGroupRemove(lib439EC7DD_gv_playersInZone, 15);
+            </ScriptCode>
+        </Element>
+        <Element Type="FunctionCall" Id="8A3F4EF6">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="C216DF7E"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="E6775F1D"/>
+        </Element>
+        <Element Type="Param" Id="C216DF7E">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="7EBF535B"/>
+        </Element>
+        <Element Type="Param" Id="E6775F1D">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="2D4F5A7C"/>
+        </Element>
+        <Element Type="FunctionCall" Id="2D4F5A7C">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000061"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="89921D03"/>
+        </Element>
+        <Element Type="Param" Id="89921D03">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000102"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="11DE89B1"/>
+        </Element>
+        <Element Type="FunctionCall" Id="A516A1DB">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000137"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="D09E087B"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="7ABF24B7"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="DE3820A4"/>
+        </Element>
+        <Element Type="FunctionCall" Id="D09E087B">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="00000005"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="21C1E296"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="85EBE4AF"/>
+        </Element>
+        <Element Type="Param" Id="21C1E296">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="66743B9D"/>
+        </Element>
+        <Element Type="Param" Id="85EBE4AF">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <Value>0</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="FunctionCall" Id="7ABF24B7">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="00000004"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="85B2E443"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="DDC74DC9"/>
+        </Element>
+        <Element Type="Param" Id="85B2E443">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="66743B9D"/>
+        </Element>
+        <Element Type="Param" Id="DDC74DC9">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="CE203BF8"/>
+        </Element>
+        <Element Type="FunctionCall" Id="CE203BF8">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000215"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="B6F28B55"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="2B036A2D"/>
+        </Element>
+        <Element Type="Param" Id="B6F28B55">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000376"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="11DE89B1"/>
+        </Element>
+        <Element Type="Param" Id="2B036A2D">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000377"/>
+            <Value>1</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="FunctionCall" Id="DE3820A4">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="C439C375"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="00000003"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="9A8A0A0A"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="F1BFA58E"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="50927FAE"/>
+        </Element>
+        <Element Type="Param" Id="9A8A0A0A">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="ABB380C4"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="7EBF535B"/>
+        </Element>
+        <Element Type="Param" Id="F1BFA58E">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="51567265"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="1E7A4625"/>
+        </Element>
+        <Element Type="Param" Id="50927FAE">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="4A15EC5F"/>
+            <Value>1</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="FunctionCall" Id="740D688F">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000137"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="4A786F96"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="5210C73C"/>
+        </Element>
+        <Element Type="FunctionCall" Id="4A786F96">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="943DF2F7"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="00000004"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="518BF1C8"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="24671D1E"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="F8DE7B5B"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="9C96B7AC"/>
+        </Element>
+        <Element Type="Param" Id="518BF1C8">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="75FC31CB"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="66743B9D"/>
+        </Element>
+        <Element Type="Param" Id="24671D1E">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="4AA9487D"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="0794D450"/>
+        </Element>
+        <Element Type="Param" Id="F8DE7B5B">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="C93A9DCB"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="A9A13ADB"/>
+        </Element>
+        <Element Type="Param" Id="9C96B7AC">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="EEF303AC"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="C4A7156F"/>
+        </Element>
+        <Element Type="FunctionCall" Id="5210C73C">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="C439C375"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="00000003"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="1E019035"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="7124E63F"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="A7EBC49B"/>
+        </Element>
+        <Element Type="Param" Id="1E019035">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="ABB380C4"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="66743B9D"/>
+        </Element>
+        <Element Type="Param" Id="7124E63F">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="51567265"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="500677B2"/>
+        </Element>
+        <Element Type="Param" Id="A7EBC49B">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="4A15EC5F"/>
+            <Value>0</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="FunctionCall" Id="875F1280">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000123"/>
+            <ScriptCode>
+                if (lib439EC7DD_gv_roundTimeRemaining &lt;= 0 &amp;&amp; lib439EC7DD_gv_playerCount &gt; 1) { lib439EC7DD_gv_roundTimeRemaining = 0; if (!lib439EC7DD_hud_contested) { lib439EC7DD_hud_contested = true; UIDisplayMessage(lib439EC7DD_hud_G(), c_messageAreaChat, StringToText(&quot;The point is contested!&quot;)); } return true; }
+            </ScriptCode>
+        </Element>
+        <Element Type="FunctionCall" Id="F79CC530">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000137"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="3ECA5571"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="C6431D79"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="19C4373A"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="228A924B"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="94CBAC96"/>
+        </Element>
+        <Element Type="FunctionCall" Id="3ECA5571">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="00000004"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="0C1E13FB"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="B4425A4D"/>
+        </Element>
+        <Element Type="Param" Id="0C1E13FB">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="A06F808B"/>
+            <Array Type="Param" Library="439EC7DD" Id="798A0A69"/>
+        </Element>
+        <Element Type="Param" Id="798A0A69">
+            <Variable Type="Variable" Library="439EC7DD" Id="66743B9D"/>
+        </Element>
+        <Element Type="Param" Id="B4425A4D">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="EBD7FCAD"/>
+        </Element>
+        <Element Type="FunctionCall" Id="EBD7FCAD">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000128"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="F8C992B0"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="C303824A"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="E8E7BB4A"/>
+        </Element>
+        <Element Type="Param" Id="F8C992B0">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000206"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="00000085"/>
+        </Element>
+        <Element Type="Param" Id="C303824A">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000207"/>
+            <Value>1</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="Param" Id="E8E7BB4A">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000205"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="A06F808B"/>
+            <Array Type="Param" Library="439EC7DD" Id="E1DF2C2E"/>
+        </Element>
+        <Element Type="Param" Id="E1DF2C2E">
+            <Variable Type="Variable" Library="439EC7DD" Id="66743B9D"/>
+        </Element>
+        <Element Type="FunctionCall" Id="C6431D79">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="00000004"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="57FB02E0"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="C95D7B7B"/>
+        </Element>
+        <Element Type="Param" Id="57FB02E0">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="9BA63CEC"/>
+        </Element>
+        <Element Type="Param" Id="C95D7B7B">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="29BED06D"/>
+        </Element>
+        <Element Type="FunctionCall" Id="29BED06D">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000128"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="71748FB0"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="29FC5F75"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="B6C8A7A5"/>
+        </Element>
+        <Element Type="Param" Id="71748FB0">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000206"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="00000085"/>
+        </Element>
+        <Element Type="Param" Id="29FC5F75">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000207"/>
+            <Value>1</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="Param" Id="B6C8A7A5">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000205"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="9BA63CEC"/>
+        </Element>
+        <Element Type="FunctionCall" Id="19C4373A">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000137"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="00000004"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="2269C506"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="D9461AD1"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="400E2552"/>
+        </Element>
+        <Element Type="FunctionCall" Id="2269C506">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000137"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="00000005"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="0F239ECF"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="94F42C6D"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="040C4E94"/>
+        </Element>
+        <Element Type="FunctionCall" Id="0F239ECF">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="00000005"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="84FDD1BA"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="9733E6AC"/>
+        </Element>
+        <Element Type="Param" Id="84FDD1BA">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="FC2A72AB"/>
+        </Element>
+        <Element Type="Param" Id="9733E6AC">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="9BB88D22"/>
+        </Element>
+        <Element Type="FunctionCall" Id="94F42C6D">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="00000004"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="C8CA0478"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="CCDAACDC"/>
+        </Element>
+        <Element Type="Param" Id="C8CA0478">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="FC2A72AB"/>
+        </Element>
+        <Element Type="Param" Id="CCDAACDC">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="F70D8505"/>
+        </Element>
+        <Element Type="FunctionCall" Id="040C4E94">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="C439C375"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="00000003"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="C148FF89"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="D7EF776E"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="1800A03B"/>
+        </Element>
+        <Element Type="Param" Id="C148FF89">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="ABB380C4"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="9BA63CEC"/>
+        </Element>
+        <Element Type="Param" Id="D7EF776E">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="51567265"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="B128CB9A"/>
+        </Element>
+        <Element Type="Param" Id="1800A03B">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="4A15EC5F"/>
+            <Value>3</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="FunctionCall" Id="D9461AD1">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="00000004"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="9A606A44"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="D2D5D20A"/>
+        </Element>
+        <Element Type="Param" Id="9A606A44">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="FC2A72AB"/>
+        </Element>
+        <Element Type="Param" Id="D2D5D20A">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="3A958EE1"/>
+        </Element>
+        <Element Type="FunctionCall" Id="400E2552">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="C439C375"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="00000003"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="6E6F6462"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="E55294C1"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="064C5874"/>
+        </Element>
+        <Element Type="Param" Id="6E6F6462">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="ABB380C4"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="9BA63CEC"/>
+        </Element>
+        <Element Type="Param" Id="E55294C1">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="51567265"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="1E7A4625"/>
+        </Element>
+        <Element Type="Param" Id="064C5874">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="4A15EC5F"/>
+            <Value>2</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="FunctionCall" Id="228A924B">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000137"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="00000004"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="1CAE11B6"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="C2E6AB8A"/>
+        </Element>
+        <Element Type="FunctionCall" Id="1CAE11B6">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000198"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="00000004"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="C8BD817E"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="E229C6F4"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="3531F0C6"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="58FA8990"/>
+        </Element>
+        <Element Type="Param" Id="C8BD817E">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000334"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="66743B9D"/>
+        </Element>
+        <Element Type="Param" Id="E229C6F4">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000335"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="00000117"/>
+        </Element>
+        <Element Type="Param" Id="3531F0C6">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000336"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="00000120"/>
+        </Element>
+        <Element Type="Param" Id="58FA8990">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000337"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="00000120"/>
+        </Element>
+        <Element Type="FunctionCall" Id="C2E6AB8A">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="C439C375"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="00000003"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="1A79E5F2"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="15DF9F9E"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="259617FB"/>
+        </Element>
+        <Element Type="Param" Id="1A79E5F2">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="ABB380C4"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="A06F808B"/>
+            <Array Type="Param" Library="439EC7DD" Id="B436C2B9"/>
+        </Element>
+        <Element Type="Param" Id="B436C2B9">
+            <Variable Type="Variable" Library="439EC7DD" Id="66743B9D"/>
+        </Element>
+        <Element Type="Param" Id="15DF9F9E">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="51567265"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="B128CB9A"/>
+        </Element>
+        <Element Type="Param" Id="259617FB">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="4A15EC5F"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="79991695"/>
+        </Element>
+        <Element Type="FunctionCall" Id="94CBAC96">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="C439C375"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="00000003"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="BAF4CDFF"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="76562501"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="991755D7"/>
+        </Element>
+        <Element Type="Param" Id="BAF4CDFF">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="ABB380C4"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="FC2A72AB"/>
+        </Element>
+        <Element Type="Param" Id="76562501">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="51567265"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="E123C832"/>
+        </Element>
+        <Element Type="Param" Id="991755D7">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="4A15EC5F"/>
+            <Value>0</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="Variable" Id="C4A7156F">
+            <VariableType>
+                <Type Value="int"/>
+            </VariableType>
+            <Value Type="Param" Library="439EC7DD" Id="8D773E59"/>
+        </Element>
+        <Element Type="Param" Id="8D773E59">
+            <Value>10</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="Variable" Id="FC2A72AB">
+            <VariableType>
+                <Type Value="int"/>
+            </VariableType>
+            <Value Type="Param" Library="439EC7DD" Id="16107CE9"/>
+        </Element>
+        <Element Type="Param" Id="16107CE9">
+            <Value>0</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="Variable" Id="F70D8505">
+            <VariableType>
+                <Type Value="int"/>
+            </VariableType>
+            <Value Type="Param" Library="439EC7DD" Id="49234B37"/>
+        </Element>
+        <Element Type="Param" Id="49234B37">
+            <Value>180</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="Variable" Id="3A958EE1">
+            <VariableType>
+                <Type Value="int"/>
+            </VariableType>
+            <Value Type="Param" Library="439EC7DD" Id="A9881E22"/>
+        </Element>
+        <Element Type="Param" Id="A9881E22">
+            <Value>240</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="Variable" Id="9BB88D22">
+            <VariableType>
+                <Type Value="int"/>
+            </VariableType>
+            <Value Type="Param" Library="439EC7DD" Id="4E0F30C7"/>
+        </Element>
+        <Element Type="Param" Id="4E0F30C7">
+            <Value>300</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="Variable" Id="CB7D674A">
+            <VariableType>
+                <Type Value="region"/>
+            </VariableType>
+            <Value Type="Param" Library="439EC7DD" Id="F39F08DF"/>
+        </Element>
+        <Element Type="Param" Id="F39F08DF">
+            <Preset Type="PresetValue" Library="Ntve" Id="F5E3F3AD"/>
+        </Element>
+        <Element Type="Trigger" Id="9A483C40">
+            <Event Type="FunctionCall" Library="439EC7DD" Id="08BCFC43"/>
+            <Action Type="FunctionCall" Library="439EC7DD" Id="22D7D9E2"/>
+            <Action Type="FunctionCall" Library="439EC7DD" Id="45A6866A"/>
+            <Action Type="FunctionCall" Library="439EC7DD" Id="6FA02B10"/>
+            <Action Type="FunctionCall" Library="439EC7DD" Id="AF834810"/>
+            <Action Type="FunctionCall" Library="439EC7DD" Id="77817815"/>
+            <Action Type="FunctionCall" Library="439EC7DD" Id="494C7CFC"/>
+            <Action Type="FunctionCall" Library="439EC7DD" Id="548EDD66"/>
+            <Action Type="FunctionCall" Library="439EC7DD" Id="4D686C6E"/>
+            <Action Type="FunctionCall" Library="439EC7DD" Id="FD35DA7C"/>
+            <Action Type="FunctionCall" Library="439EC7DD" Id="05F884EC"/>
+            <Action Type="FunctionCall" Library="439EC7DD" Id="C7832917"/>
+            <Action Type="FunctionCall" Library="439EC7DD" Id="328DB491"/>
+            <Action Type="FunctionCall" Library="439EC7DD" Id="06FA07B6"/>
+        </Element>
+        <Element Type="FunctionCall" Id="08BCFC43">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000120"/>
+        </Element>
+        <Element Type="FunctionCall" Id="22D7D9E2">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="08F9C1C2"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="4D82D589"/>
+        </Element>
+        <Element Type="Param" Id="08F9C1C2">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="C4A7156F"/>
+        </Element>
+        <Element Type="Param" Id="4D82D589">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <CustomType Type="int"/>
+            <ScriptCode>
+                StringToInt(GameAttributeGameValue(&quot;6&quot;)) * 5
+            </ScriptCode>
+        </Element>
+        <Element Type="FunctionCall" Id="45A6866A">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="13E669D5"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="A83C6473"/>
+        </Element>
+        <Element Type="Param" Id="13E669D5">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="79991695"/>
+        </Element>
+        <Element Type="Param" Id="A83C6473">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <CustomType Type="int"/>
+            <ScriptCode>
+                StringToInt(GameAttributeGameValue(&quot;5&quot;))
+            </ScriptCode>
+        </Element>
+        <Element Type="FunctionCall" Id="6FA02B10">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="D2132ACC"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="7FB740E8"/>
+        </Element>
+        <Element Type="Param" Id="D2132ACC">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="F70D8505"/>
+        </Element>
+        <Element Type="Param" Id="7FB740E8">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <CustomType Type="int"/>
+            <ScriptCode>
+                StringToInt(GameAttributeGameValue(&quot;4&quot;)) * 60
+            </ScriptCode>
+        </Element>
+        <Element Type="FunctionCall" Id="AF834810">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="428883A0"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="D6DE88BE"/>
+        </Element>
+        <Element Type="Param" Id="428883A0">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="3A958EE1"/>
+        </Element>
+        <Element Type="Param" Id="D6DE88BE">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <CustomType Type="int"/>
+            <ScriptCode>
+                StringToInt(GameAttributeGameValue(&quot;3&quot;)) * 60
+            </ScriptCode>
+        </Element>
+        <Element Type="FunctionCall" Id="77817815">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="57904232"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="08A6AEFD"/>
+        </Element>
+        <Element Type="Param" Id="57904232">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="9BB88D22"/>
+        </Element>
+        <Element Type="Param" Id="08A6AEFD">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <CustomType Type="int"/>
+            <ScriptCode>
+                StringToInt(GameAttributeGameValue(&quot;2&quot;)) * 60
+            </ScriptCode>
+        </Element>
+        <Element Type="FunctionCall" Id="494C7CFC">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="55A87976"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="F3F17746"/>
+        </Element>
+        <Element Type="Param" Id="55A87976">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="B18A3820"/>
+        </Element>
+        <Element Type="Param" Id="F3F17746">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <CustomType Type="int"/>
+            <ScriptCode>
+                (StringToInt(GameAttributeGameValue(&quot;1&quot;)) - 1) * 10
+            </ScriptCode>
+        </Element>
+        <Element Type="FunctionCall" Id="548EDD66">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="97FDD2FE"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="D4C135AE"/>
+        </Element>
+        <Element Type="Param" Id="97FDD2FE">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="826F34FC"/>
+        </Element>
+        <Element Type="Param" Id="D4C135AE">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="A96CC8C3"/>
+        </Element>
+        <Element Type="FunctionCall" Id="A96CC8C3">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000039"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="417A15E9"/>
+        </Element>
+        <Element Type="Param" Id="417A15E9">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000070"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="EB7E166C"/>
+        </Element>
+        <Element Type="FunctionCall" Id="EB7E166C">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="46F2D5B8"/>
+        </Element>
+        <Element Type="FunctionCall" Id="4D686C6E">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="4A929B57"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="BF712974"/>
+        </Element>
+        <Element Type="Param" Id="4A929B57">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="58818BCD"/>
+        </Element>
+        <Element Type="Param" Id="BF712974">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="826F34FC"/>
+        </Element>
+        <Element Type="FunctionCall" Id="FD35DA7C">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="71596144"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="3141D056"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="7D1217F9"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="55ECE9C1"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="5319FD92"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="844F22A7"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="EF4A7369"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="111C7271"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="E218D086"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="041E60DB"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="5CCCA516"/>
+        </Element>
+        <Element Type="FunctionCall" Id="3141D056">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="C439C375"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="20298AEC"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="E4F8615F"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="40C052F2"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="B9824815"/>
+        </Element>
+        <Element Type="Param" Id="E4F8615F">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="ABB380C4"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="E74AC9A1"/>
+        </Element>
+        <Element Type="Param" Id="40C052F2">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="51567265"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="684CA9CE"/>
+        </Element>
+        <Element Type="Param" Id="B9824815">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="4A15EC5F"/>
+            <Value>20</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="FunctionCall" Id="7D1217F9">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="C439C375"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="20298AEC"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="03A4B1DC"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="6F5BDCD5"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="687E300F"/>
+        </Element>
+        <Element Type="Param" Id="03A4B1DC">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="ABB380C4"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="F48D1177"/>
+        </Element>
+        <Element Type="Param" Id="6F5BDCD5">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="51567265"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="1E7A4625"/>
+        </Element>
+        <Element Type="Param" Id="687E300F">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="4A15EC5F"/>
+            <Value>false</Value>
+            <ValueType Type="bool"/>
+        </Element>
+        <Element Type="FunctionCall" Id="55ECE9C1">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="A1B37466"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="973050F7"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="8E54A38A"/>
+        </Element>
+        <Element Type="Param" Id="973050F7">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="F48D1177"/>
+        </Element>
+        <Element Type="Param" Id="8E54A38A">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <Value>true</Value>
+            <ValueType Type="bool"/>
+        </Element>
+        <Element Type="FunctionCall" Id="5319FD92">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000137"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="A1B37466"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="EBD85239"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="0318C65E"/>
+        </Element>
+        <Element Type="FunctionCall" Id="EBD85239">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="00000004"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="47974058"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="EF0D15B4"/>
+        </Element>
+        <Element Type="Param" Id="47974058">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="F48D1177"/>
+        </Element>
+        <Element Type="Param" Id="EF0D15B4">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <Value>false</Value>
+            <ValueType Type="bool"/>
+        </Element>
+        <Element Type="FunctionCall" Id="0318C65E">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="C439C375"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="00000003"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="E4ADFD4E"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="665D20CB"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="8ADC6D90"/>
+        </Element>
+        <Element Type="Param" Id="E4ADFD4E">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="ABB380C4"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="7838DC46"/>
+        </Element>
+        <Element Type="FunctionCall" Id="7838DC46">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="8E92E713"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="DD70AF62"/>
+        </Element>
+        <Element Type="Param" Id="DD70AF62">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="640B13E2"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="826F34FC"/>
+        </Element>
+        <Element Type="Param" Id="665D20CB">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="51567265"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="1E7A4625"/>
+        </Element>
+        <Element Type="Param" Id="8ADC6D90">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="4A15EC5F"/>
+            <Value>false</Value>
+            <ValueType Type="bool"/>
+        </Element>
+        <Element Type="FunctionCall" Id="844F22A7">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000137"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="A1B37466"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="2BF52632"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="F12C61F7"/>
+        </Element>
+        <Element Type="FunctionCall" Id="2BF52632">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="00000004"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="4D55C60A"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="9838E4B9"/>
+        </Element>
+        <Element Type="Param" Id="4D55C60A">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="F48D1177"/>
+        </Element>
+        <Element Type="Param" Id="9838E4B9">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <Value>false</Value>
+            <ValueType Type="bool"/>
+        </Element>
+        <Element Type="FunctionCall" Id="F12C61F7">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="C439C375"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="00000003"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="4CA74D28"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="5819C244"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="9B9D900F"/>
+        </Element>
+        <Element Type="Param" Id="4CA74D28">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="ABB380C4"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="3901CD2F"/>
+        </Element>
+        <Element Type="FunctionCall" Id="3901CD2F">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="8E92E713"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="C092F59A"/>
+        </Element>
+        <Element Type="Param" Id="C092F59A">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="640B13E2"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="03F0623F"/>
+        </Element>
+        <Element Type="FunctionCall" Id="03F0623F">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000241"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="AC79E60D"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="525595E9"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="6F518448"/>
+        </Element>
+        <Element Type="Param" Id="AC79E60D">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000417"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="F1119085"/>
+        </Element>
+        <Element Type="Param" Id="525595E9">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000418"/>
+            <Value>0</Value>
+            <ValueType Type="fixed"/>
+        </Element>
+        <Element Type="Param" Id="6F518448">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000416"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="826F34FC"/>
+        </Element>
+        <Element Type="Param" Id="5819C244">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="51567265"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="1E7A4625"/>
+        </Element>
+        <Element Type="Param" Id="9B9D900F">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="4A15EC5F"/>
+            <Value>false</Value>
+            <ValueType Type="bool"/>
+        </Element>
+        <Element Type="FunctionCall" Id="EF4A7369">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000137"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="A1B37466"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="E9FF2303"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="6E9C99B6"/>
+        </Element>
+        <Element Type="FunctionCall" Id="E9FF2303">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="00000004"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="6F09E5A4"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="A9CAD2F3"/>
+        </Element>
+        <Element Type="Param" Id="6F09E5A4">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="F48D1177"/>
+        </Element>
+        <Element Type="Param" Id="A9CAD2F3">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <Value>false</Value>
+            <ValueType Type="bool"/>
+        </Element>
+        <Element Type="FunctionCall" Id="6E9C99B6">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="C439C375"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="00000003"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="36A0957D"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="3CA0AE65"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="121EA074"/>
+        </Element>
+        <Element Type="Param" Id="36A0957D">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="ABB380C4"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="33A98726"/>
+        </Element>
+        <Element Type="FunctionCall" Id="33A98726">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="8E92E713"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="55EF663A"/>
+        </Element>
+        <Element Type="Param" Id="55EF663A">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="640B13E2"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="B8F3F07C"/>
+        </Element>
+        <Element Type="FunctionCall" Id="B8F3F07C">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000241"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="DEA0AACA"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="A9D689BF"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="CEC725B3"/>
+        </Element>
+        <Element Type="Param" Id="DEA0AACA">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000417"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="F1119085"/>
+        </Element>
+        <Element Type="Param" Id="A9D689BF">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000418"/>
+            <Value>90.0</Value>
+            <ValueType Type="fixed"/>
+        </Element>
+        <Element Type="Param" Id="CEC725B3">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000416"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="826F34FC"/>
+        </Element>
+        <Element Type="Param" Id="3CA0AE65">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="51567265"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="1E7A4625"/>
+        </Element>
+        <Element Type="Param" Id="121EA074">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="4A15EC5F"/>
+            <Value>false</Value>
+            <ValueType Type="bool"/>
+        </Element>
+        <Element Type="FunctionCall" Id="111C7271">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000137"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="A1B37466"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="3827FC9A"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="73E3AE5B"/>
+        </Element>
+        <Element Type="FunctionCall" Id="3827FC9A">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="00000004"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="04E37B1F"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="08D9C6C2"/>
+        </Element>
+        <Element Type="Param" Id="04E37B1F">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="F48D1177"/>
+        </Element>
+        <Element Type="Param" Id="08D9C6C2">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <Value>false</Value>
+            <ValueType Type="bool"/>
+        </Element>
+        <Element Type="FunctionCall" Id="73E3AE5B">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="C439C375"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="00000003"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="5363AB5C"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="BCC925E9"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="55B28FF3"/>
+        </Element>
+        <Element Type="Param" Id="5363AB5C">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="ABB380C4"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="83429B2B"/>
+        </Element>
+        <Element Type="FunctionCall" Id="83429B2B">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="8E92E713"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="862C0B78"/>
+        </Element>
+        <Element Type="Param" Id="862C0B78">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="640B13E2"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="0456B8AE"/>
+        </Element>
+        <Element Type="FunctionCall" Id="0456B8AE">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000241"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="BA3ECB0D"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="0B39B747"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="97DF75BB"/>
+        </Element>
+        <Element Type="Param" Id="BA3ECB0D">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000417"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="F1119085"/>
+        </Element>
+        <Element Type="Param" Id="0B39B747">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000418"/>
+            <Value>180.0</Value>
+            <ValueType Type="fixed"/>
+        </Element>
+        <Element Type="Param" Id="97DF75BB">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000416"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="826F34FC"/>
+        </Element>
+        <Element Type="Param" Id="BCC925E9">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="51567265"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="1E7A4625"/>
+        </Element>
+        <Element Type="Param" Id="55B28FF3">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="4A15EC5F"/>
+            <Value>false</Value>
+            <ValueType Type="bool"/>
+        </Element>
+        <Element Type="FunctionCall" Id="E218D086">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000137"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="A1B37466"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="530B3DE8"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="85412F94"/>
+        </Element>
+        <Element Type="FunctionCall" Id="530B3DE8">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="00000004"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="9D9B57A3"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="3DD6A5F1"/>
+        </Element>
+        <Element Type="Param" Id="9D9B57A3">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="F48D1177"/>
+        </Element>
+        <Element Type="Param" Id="3DD6A5F1">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <Value>false</Value>
+            <ValueType Type="bool"/>
+        </Element>
+        <Element Type="FunctionCall" Id="85412F94">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="C439C375"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="00000003"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="287E5D69"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="63DBD1FB"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="18DA5FD0"/>
+        </Element>
+        <Element Type="Param" Id="287E5D69">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="ABB380C4"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="FB4E7AC3"/>
+        </Element>
+        <Element Type="FunctionCall" Id="FB4E7AC3">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="8E92E713"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="833E184F"/>
+        </Element>
+        <Element Type="Param" Id="833E184F">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="640B13E2"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="21F132BA"/>
+        </Element>
+        <Element Type="FunctionCall" Id="21F132BA">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000241"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="A80EF849"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="00E53CA7"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="FE1023B8"/>
+        </Element>
+        <Element Type="Param" Id="A80EF849">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000417"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="F1119085"/>
+        </Element>
+        <Element Type="Param" Id="00E53CA7">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000418"/>
+            <Value>270.0</Value>
+            <ValueType Type="fixed"/>
+        </Element>
+        <Element Type="Param" Id="FE1023B8">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000416"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="826F34FC"/>
+        </Element>
+        <Element Type="Param" Id="63DBD1FB">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="51567265"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="1E7A4625"/>
+        </Element>
+        <Element Type="Param" Id="18DA5FD0">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="4A15EC5F"/>
+            <Value>false</Value>
+            <ValueType Type="bool"/>
+        </Element>
+        <Element Type="FunctionCall" Id="041E60DB">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000123"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="A1B37466"/>
+            <ScriptCode>
+                lib439EC7DD_gv_centerPoint = lib439EC7DD_hud_FlatSpot(lib439EC7DD_gv_originalCenterPoint, lib439EC7DD_gv_captureRadius + 0.75); lib439EC7DD_gv_zoneIsClear = true;
+            </ScriptCode>
+        </Element>
+        <Element Type="FunctionCall" Id="5CCCA516">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="A1B37466"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="E0DBAC11"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="9D404602"/>
+        </Element>
+        <Element Type="Param" Id="E0DBAC11">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="E74AC9A1"/>
+        </Element>
+        <Element Type="Param" Id="9D404602">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="07BB604D"/>
+        </Element>
+        <Element Type="FunctionCall" Id="07BB604D">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000128"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="682220E6"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="166DB481"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="DA8985FD"/>
+        </Element>
+        <Element Type="Param" Id="682220E6">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000206"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="00000085"/>
+        </Element>
+        <Element Type="Param" Id="166DB481">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000207"/>
+            <Value>1</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="Param" Id="DA8985FD">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000205"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="E74AC9A1"/>
+        </Element>
+        <Element Type="FunctionCall" Id="05F884EC">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="6769B0CF"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="EAF8FA07"/>
+        </Element>
+        <Element Type="Param" Id="6769B0CF">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="CB7D674A"/>
+        </Element>
+        <Element Type="Param" Id="EAF8FA07">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="1B0F6BB0"/>
+        </Element>
+        <Element Type="FunctionCall" Id="1B0F6BB0">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000030"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="536D720E"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="F9433A81"/>
+        </Element>
+        <Element Type="Param" Id="536D720E">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000049"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="826F34FC"/>
+        </Element>
+        <Element Type="Param" Id="F9433A81">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000050"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="F1119085"/>
+        </Element>
+        <Element Type="FunctionCall" Id="C7832917">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="AB4663C2"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="EA5C2082"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="E8AC231F"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="9BC8C28A"/>
+        </Element>
+        <Element Type="Param" Id="EA5C2082">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="EA2CBB1A"/>
+            <Value>15</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="Param" Id="E8AC231F">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="FF6AF0FE"/>
+            <Value>CZCirclePersistent</Value>
+            <ValueType Type="gamelink"/>
+            <ValueGameType Type="Effect"/>
+        </Element>
+        <Element Type="Param" Id="9BC8C28A">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="01D6D660"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="826F34FC"/>
+        </Element>
+        <Element Type="FunctionCall" Id="328DB491">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000137"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="108BE4D3"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="25D43BCE"/>
+        </Element>
+        <Element Type="FunctionCall" Id="108BE4D3">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="C439C375"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="00000003"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="E79E834E"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="9E53DA6F"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="AA88B394"/>
+        </Element>
+        <Element Type="Param" Id="E79E834E">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="ABB380C4"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="589B8E29"/>
+        </Element>
+        <Element Type="FunctionCall" Id="589B8E29">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="9AC9D531"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="F3C873F0"/>
+        </Element>
+        <Element Type="Param" Id="F3C873F0">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="6CB812B6"/>
+            <Value>&quot;7&quot;</Value>
+            <ValueType Type="attributegame"/>
+            <DisplayText>Видимость зоны</DisplayText>
+        </Element>
+        <Element Type="Param" Id="9E53DA6F">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="51567265"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="1E7A4625"/>
+        </Element>
+        <Element Type="Param" Id="AA88B394">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="4A15EC5F"/>
+            <Value>&quot;7|0001&quot;</Value>
+            <ValueType Type="attributevalue"/>
+            <DisplayText>Всегда видна</DisplayText>
+        </Element>
+        <Element Type="FunctionCall" Id="25D43BCE">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="5084725D"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="00000004"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="2B47D8AC"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="7183B3DB"/>
+        </Element>
+        <Element Type="Param" Id="2B47D8AC">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="42AB3EFD"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="BACFD2A1"/>
+        </Element>
+        <Element Type="FunctionCall" Id="BACFD2A1">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000192"/>
+        </Element>
+        <Element Type="FunctionCall" Id="7183B3DB">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="685AF92D"/>
+            <SubFunctionType Type="SubFuncType" Library="Ntve" Id="DEA91B62"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="4CFDAFC7"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="C6F722E8"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="A12519F4"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="893C567B"/>
+        </Element>
+        <Element Type="Param" Id="4CFDAFC7">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="654EA30A"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="E0C2DB61"/>
+        </Element>
+        <Element Type="FunctionCall" Id="E0C2DB61">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="8570CA61"/>
+        </Element>
+        <Element Type="Param" Id="C6F722E8">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="9EE40FDE"/>
+            <Value>32767.0</Value>
+            <ValueType Type="fixed"/>
+        </Element>
+        <Element Type="Param" Id="A12519F4">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="415394EA"/>
+            <Preset Type="PresetValue" Library="Ntve" Id="00000072"/>
+        </Element>
+        <Element Type="Param" Id="893C567B">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="A8FE7C12"/>
+            <FunctionCall Type="FunctionCall" Library="439EC7DD" Id="5652C64F"/>
+        </Element>
+        <Element Type="FunctionCall" Id="5652C64F">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000030"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="0C099F9E"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="B4BF0A6C"/>
+        </Element>
+        <Element Type="Param" Id="0C099F9E">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000049"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="826F34FC"/>
+        </Element>
+        <Element Type="Param" Id="B4BF0A6C">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000050"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="795959C0"/>
+        </Element>
+        <Element Type="FunctionCall" Id="06FA07B6">
+            <FunctionDef Type="FunctionDef" Library="Ntve" Id="00000136"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="F3BC28FA"/>
+            <Parameter Type="Param" Library="439EC7DD" Id="A72C7D01"/>
+        </Element>
+        <Element Type="Param" Id="F3BC28FA">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000219"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="FC2A72AB"/>
+        </Element>
+        <Element Type="Param" Id="A72C7D01">
+            <ParameterDef Type="ParamDef" Library="Ntve" Id="00000220"/>
+            <Variable Type="Variable" Library="439EC7DD" Id="9BB88D22"/>
+        </Element>
+        <Element Type="Variable" Id="F1119085">
+            <VariableType>
+                <Type Value="fixed"/>
+            </VariableType>
+            <Value Type="Param" Library="439EC7DD" Id="F6CE4E72"/>
+        </Element>
+        <Element Type="Param" Id="F6CE4E72">
+            <Value>2.25</Value>
+            <ValueType Type="fixed"/>
+        </Element>
+        <Element Type="Variable" Id="826F34FC">
+            <VariableType>
+                <Type Value="point"/>
+            </VariableType>
+            <Value Type="Param" Library="439EC7DD" Id="487291FE"/>
+        </Element>
+        <Element Type="Param" Id="487291FE">
+            <Preset Type="PresetValue" Library="Ntve" Id="568CBBF1"/>
+        </Element>
+        <Element Type="Variable" Id="A97B7966">
+            <VariableType>
+                <Type Value="bool"/>
+                <ArraySize Dim="0" Value="16"/>
+            </VariableType>
+            <Value Type="Param" Library="439EC7DD" Id="F53553B0"/>
+        </Element>
+        <Element Type="Param" Id="F53553B0">
+            <Value>false</Value>
+            <ValueType Type="bool"/>
+        </Element>
+        <Element Type="Variable" Id="79991695">
+            <VariableType>
+                <Type Value="int"/>
+            </VariableType>
+            <Value Type="Param" Library="439EC7DD" Id="FE523ECC"/>
+        </Element>
+        <Element Type="Param" Id="FE523ECC">
+            <Value>3</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="Variable" Id="A06F808B">
+            <VariableType>
+                <Type Value="int"/>
+                <ArraySize Dim="0" Value="16"/>
+            </VariableType>
+            <Value Type="Param" Library="439EC7DD" Id="9A7B8A2F"/>
+        </Element>
+        <Element Type="Param" Id="9A7B8A2F">
+            <Value>0</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="Variable" Id="B18A3820">
+            <VariableType>
+                <Type Value="int"/>
+            </VariableType>
+            <Value Type="Param" Library="439EC7DD" Id="4F366F3B"/>
+        </Element>
+        <Element Type="Param" Id="4F366F3B">
+            <Value>100</Value>
+            <ValueType Type="int"/>
+        </Element>
+        <Element Type="Variable" Id="9BA63CEC">
+            <VariableType>
+                <Type Value="int"/>
+            </VariableType>
+            <Value Type="Param" Library="439EC7DD" Id="71D065E2"/>
+        </Element>
+        <Element Type="Param" Id="71D065E2">
+            <Value>1</Value>
+            <ValueType Type="int"/>
+        </Element>
+    </Library>
+</TriggerData>

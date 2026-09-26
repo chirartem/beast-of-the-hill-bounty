@@ -1,0 +1,10 @@
+﻿Actor/Name/CZCircleHeight=CZCircleHeight
+Actor/Name/CZCirclePersistentActor=CZCirclePersistentActor
+Actor/Name/CZCircleRaise=CZCircleRaise
+Actor/Name/CZCircleSplat=CZCircleSplat
+Actor/Name/InvisibleTargetDummy2=Invisible Target Dummy
+Model/EditorDescription/LiberatorAGTargetCursorSplat2=
+Model/EditorPrefix/LiberatorAGTargetCursorSplat2=
+Model/EditorSuffix/LiberatorAGTargetCursorSplat2=
+Model/Name/CZCircleSplat=CZCircleSplat
+Model/Name/LiberatorAGTargetCursorSplat2=CZCircleRedSplat

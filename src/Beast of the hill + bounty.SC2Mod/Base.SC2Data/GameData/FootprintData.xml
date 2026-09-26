@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Catalog>
+    <CFootprint id="CZNoBuildCircle">
+        <Layers index="Check" Area="-3,-3,3,3">
+            <Sets index="0" removed="1"/>
+            <Rows value="......"/>
+            <Rows value="......"/>
+            <Rows value="......"/>
+            <Rows value="......"/>
+            <Rows value="......"/>
+            <Rows value="......"/>
+        </Layers>
+        <Layers index="Place" Area="-3,-3,3,3">
+            <Sets index="0">
+                <Positive index="GroundNoSpawn" value="0"/>
+            </Sets>
+            <Rows value=".xxxx."/>
+            <Rows value="xxxxxx"/>
+            <Rows value="xxxxxx"/>
+            <Rows value="xxxxxx"/>
+            <Rows value="xxxxxx"/>
+            <Rows value=".xxxx."/>
+        </Layers>
+    </CFootprint>
+</Catalog>
