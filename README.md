@@ -10,7 +10,7 @@ StarCraft II extension mod: a king-of-the-hill free-for-all with a bounty for ki
 - Whoever holds the circle alone when the round timer runs out scores a point. The first to reach the points-to-win setting wins, and allies win together.
 - If several players are on the circle when the timer ends, the round goes into overtime ("The point is contested!") until only one player remains.
 - Priorities on the circle: ground > cloaked or burrowed ground > air > cloaked air > temporary units > eggs and cocoons. Buildings and hallucinations never count.
-- While you hold the circle alone you gain minerals every second.
+- While you hold the circle alone you gain minerals every second. In a team the income is split evenly between all teammates; a leftover mineral goes to a different teammate each second (5 for two players: 3 + 2, then 2 + 3).
 - Bounty: killing an enemy unit gives you a share of its cost (minerals and gas). Buildings, hallucinations and your own units give nothing.
 - The circle cannot be built on: its cells show red in the placement grid.
 
@@ -58,7 +58,7 @@ To try it locally, put the `.SC2Mod` file in your `StarCraft II/Mods` folder, ad
 - Кто один стоит на круге, когда заканчивается таймер раунда, получает очко. Побеждает тот, кто первым наберёт нужное число очков. Союзники побеждают вместе.
 - Если на круге несколько игроков, раунд продолжается («The point is contested!»), пока не останется один.
 - Приоритеты на круге: наземные > невидимые или закопанные наземные > воздушные > невидимые воздушные > временные юниты > яйца и коконы. Здания и галлюцинации не учитываются.
-- Пока вы один на круге, вы каждую секунду получаете минералы.
+- Пока вы один на круге, вы каждую секунду получаете минералы. В команде доход делится поровну между всеми союзниками; лишний минерал каждую секунду достаётся другому игроку (5 на двоих: 3 + 2, потом 2 + 3).
 - Награда: за убийство вражеского юнита вы получаете часть его стоимости (минералы и газ). За здания, галлюцинации и своих юнитов награды нет.
 - На круге нельзя строить: его клетки при постройке показаны красными.
 
